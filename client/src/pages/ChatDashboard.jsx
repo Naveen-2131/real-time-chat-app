@@ -11,6 +11,7 @@ import CreateGroupModal from '../components/CreateGroupModal';
 import ProfileModal from '../components/ProfileModal';
 import GroupInfoModal from '../components/GroupInfoModal';
 import { formatLastSeen, isUserOnline } from '../utils/timeUtils';
+import { requestNotificationPermission, showMessageNotification, updateTabTitle } from '../utils/notifications';
 
 const ChatDashboard = () => {
     const { user, logout } = useAuth();
@@ -40,8 +41,16 @@ const ChatDashboard = () => {
     const [isMobileView, setIsMobileView] = useState(false);
     const [showChatList, setShowChatList] = useState(true);
 
+    // Notification states
+    const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+
     const messagesEndRef = useRef(null);
     const fileUploadRef = useRef(null);
+
+    // Request notification permission on mount
+    useEffect(() => {
+        requestNotificationPermission();
+    }, []);
 
     // Detect screen size for mobile view
     useEffect(() => {
@@ -74,9 +83,16 @@ const ChatDashboard = () => {
     useEffect(() => {
         if (socket) {
             socket.on('new_message', (message) => {
-                // Show notification
+                // Show notification for messages from others
                 if (message.sender._id !== user._id) {
-                    toast.success(`New message from ${message.sender.username}`);
+                    const senderName = message.sender.username;
+                    const isGroup = !!message.group;
+
+                    // Show browser notification
+                    showMessageNotification(message, senderName, isGroup);
+
+                    // Show toast notification
+                    toast.success(`New message from ${senderName}`);
                 }
 
                 if (selectedChat && (selectedChat._id === message.conversation || selectedChat._id === message.group)) {
@@ -502,7 +518,14 @@ const ChatDashboard = () => {
                                                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 p-[2px]">
                                                         <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                                             {chat.participants.find(p => p._id !== user._id)?.profilePicture ? (
-                                                                <img src={`${import.meta.env.VITE_SOCKET_URL}${chat.participants.find(p => p._id !== user._id).profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                                <img
+                                                                    src={chat.participants.find(p => p._id !== user._id).profilePicture.startsWith('data:')
+                                                                        ? chat.participants.find(p => p._id !== user._id).profilePicture
+                                                                        : `${import.meta.env.VITE_SOCKET_URL}${chat.participants.find(p => p._id !== user._id).profilePicture}`
+                                                                    }
+                                                                    alt="Profile"
+                                                                    className="w-full h-full object-cover"
+                                                                />
                                                             ) : (
                                                                 <span className="text-indigo-500 font-bold text-lg">
                                                                     {chat.participants.find(p => p._id !== user._id)?.username[0].toUpperCase()}
@@ -520,11 +543,21 @@ const ChatDashboard = () => {
                                                         <h4 className={`font-semibold truncate ${selectedChat?._id === chat._id ? 'text-primary-light' : 'text-slate-200'}`}>
                                                             {chat.participants.find(p => p._id !== user._id)?.username}
                                                         </h4>
-                                                        {chat.lastMessage && (
-                                                            <span className="text-[10px] text-slate-400">
-                                                                {new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        )}
+                                                        <div className="flex items-center space-x-2">
+                                                            {chat.lastMessage && (
+                                                                <span className="text-[10px] text-slate-400">
+                                                                    {new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            )}
+                                                            {/* Unread count badge - WhatsApp style */}
+                                                            {chat.unreadCount && (chat.unreadCount[user._id] || (chat.unreadCount.get && chat.unreadCount.get(user._id))) > 0 && (
+                                                                <div className="min-w-[20px] h-5 bg-green-500 rounded-full flex items-center justify-center px-1.5">
+                                                                    <span className="text-[10px] font-bold text-white">
+                                                                        {chat.unreadCount[user._id] || chat.unreadCount.get(user._id)}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     {/* Show last seen instead of message preview if no messages */}
                                                     {chat.lastMessage ? (
@@ -572,11 +605,21 @@ const ChatDashboard = () => {
                                                         <h4 className={`font-semibold truncate ${selectedChat?._id === group._id ? 'text-primary-light' : 'text-slate-200'}`}>
                                                             {group.name}
                                                         </h4>
-                                                        {group.lastMessage && (
-                                                            <span className="text-[10px] text-slate-400">
-                                                                {new Date(group.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        )}
+                                                        <div className="flex items-center space-x-2">
+                                                            {group.lastMessage && (
+                                                                <span className="text-[10px] text-slate-400">
+                                                                    {new Date(group.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </span>
+                                                            )}
+                                                            {/* Unread count badge - WhatsApp style */}
+                                                            {group.unreadCount && (group.unreadCount[user._id] || (group.unreadCount.get && group.unreadCount.get(user._id))) > 0 && (
+                                                                <div className="min-w-[20px] h-5 bg-green-500 rounded-full flex items-center justify-center px-1.5">
+                                                                    <span className="text-[10px] font-bold text-white">
+                                                                        {group.unreadCount[user._id] || group.unreadCount.get(user._id)}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <p className={`text-xs truncate ${selectedChat?._id === group._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
                                                         {group.lastMessage ? (
@@ -863,3 +906,4 @@ const ChatDashboard = () => {
 };
 
 export default ChatDashboard;
+
