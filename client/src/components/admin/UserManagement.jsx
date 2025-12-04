@@ -67,8 +67,19 @@ const UserManagement = () => {
                                 <tr key={user._id}>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex items-center">
-                                            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                                                {user.username[0].toUpperCase()}
+                                            <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-white font-bold overflow-hidden">
+                                                {user.profilePicture ? (
+                                                    <img
+                                                        src={user.profilePicture.startsWith('data:')
+                                                            ? user.profilePicture
+                                                            : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`
+                                                        }
+                                                        alt={user.username}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    user.username[0].toUpperCase()
+                                                )}
                                             </div>
                                             <div className="ml-4">
                                                 <div className="text-sm font-medium text-white">{user.username}</div>
