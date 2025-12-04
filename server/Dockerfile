@@ -1,5 +1,5 @@
-# Stage 1: Build
-FROM node:18-alpine
+# Use Node 20 for MongoDB 7.x compatibility
+FROM node:20-alpine
 
 WORKDIR /app
 
