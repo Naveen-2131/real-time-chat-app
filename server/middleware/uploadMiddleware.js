@@ -1,20 +1,8 @@
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
 
-// Ensure uploads directory exists
-const uploadDir = './uploads/';
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-// Set storage engine
-const storage = multer.diskStorage({
-    destination: uploadDir,
-    filename: function (req, file, cb) {
-        cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
-    }
-});
+// Use memory storage instead of disk storage for base64 conversion
+const storage = multer.memoryStorage();
 
 // Check file type
 function checkFileType(file, cb) {
