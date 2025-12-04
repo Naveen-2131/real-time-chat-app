@@ -1,117 +1,121 @@
-const Message = require('../models/Message');
 const User = require('../models/User');
-const Conversation = require('../models/Conversation');
-const Group = require('../models/Group');
 
-// @desc    Send a message
-// @route   POST /api/messages
+// @desc    Get user profile
+// @route   GET /api/users/profile/:id
 // @access  Private
-const sendMessage = async (req, res) => {
+const getUserProfile = async (req, res) => {
+    const user = await User.findById(req.params.id).select('-password');
+    if (user) {
+        res.json(user);
+    } else {
+        res.status(404).json({ message: 'User not found' });
+    }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/users/profile
+// @access  Private
+const updateUserProfile = async (req, res) => {
     try {
-        console.log('=== SEND MESSAGE REQUEST ===');
+        console.log('=== UPDATE PROFILE REQUEST ===');
         console.log('User ID:', req.user?.id);
         console.log('Body:', req.body);
         console.log('File:', req.file);
-        console.log('Files:', req.files);
 
-        if (!req.user || !req.user.id) {
-            console.error('User not authenticated');
-            return res.status(401).json({ message: 'User not authenticated' });
+        const user = await User.findById(req.user.id);
+
+        if (!user) {
+            console.log('User not found:', req.user.id);
+            return res.status(404).json({ message: 'User not found' });
         }
 
-        const { content, conversationId, groupId } = req.body;
-        let fileData = {};
+        user.username = req.body.username || user.username;
+        user.email = req.body.email || user.email;
+        user.customStatus = req.body.customStatus || user.customStatus;
+        user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
 
+        // Handle avatar upload - Convert to base64 and store in DB
         if (req.file) {
-            console.log('Processing file:', req.file.originalname);
+            console.log('Processing file upload:', req.file.originalname);
 
-            // Convert to base64
-            const base64File = req.file.buffer.toString('base64');
-            const mimeType = req.file.mimetype;
-            const dataUrl = `data:${mimeType};base64,${base64File}`;
+            let base64Image;
+            if (req.file.buffer) {
+                // Memory storage
+                base64Image = req.file.buffer.toString('base64');
+            } else if (req.file.path) {
+                // Disk storage fallback
+                const fs = require('fs');
+                const fileBuffer = fs.readFileSync(req.file.path);
+                base64Image = fileBuffer.toString('base64');
+                // Clean up temp file
+                try { fs.unlinkSync(req.file.path); } catch (e) { }
+            }
 
-            fileData = {
-                fileUrl: dataUrl,
-                fileType: req.file.mimetype.split('/')[0], // 'image', 'video', etc.
-                fileName: req.file.originalname,
-                fileSize: req.file.size
-            };
-            console.log('File converted to base64');
+            if (base64Image) {
+                const mimeType = req.file.mimetype;
+                user.profilePicture = `data:${mimeType};base64,${base64Image}`;
+                console.log('Profile picture converted to base64 and stored in DB');
+            }
         }
 
-        if (!content && !req.file) {
-            console.log('No content or file provided');
-            return res.status(400).json({ message: 'Message must have content or a file' });
+        if (req.body.password) {
+            user.password = req.body.password;
         }
 
-        // Ensure content is not undefined when creating message
-        const messageContent = content && content.trim() ? content.trim() : '';
+        const updatedUser = await user.save();
+        console.log('Profile updated successfully');
 
-        var newMessage = {
-            sender: req.user.id,
-            content: messageContent,
-            conversation: conversationId,
-            group: groupId,
-            ...fileData
-        };
-
-        console.log('Creating message:', newMessage);
-        var message = await Message.create(newMessage);
-
-        message = await message.populate('sender', 'username profilePicture');
-
-        if (conversationId) {
-            message = await message.populate('conversation');
-            message = await User.populate(message, {
-                path: 'conversation.participants',
-                select: 'username profilePicture email',
-            });
-            await Conversation.findByIdAndUpdate(conversationId, { lastMessage: message });
-        } else if (groupId) {
-            message = await message.populate('group');
-            await Group.findByIdAndUpdate(groupId, { lastMessage: message });
-        }
-
-        console.log('Message sent successfully');
-        res.json(message);
+        res.json({
+            _id: updatedUser.id,
+            username: updatedUser.username,
+            email: updatedUser.email,
+            profilePicture: updatedUser.profilePicture,
+            customStatus: updatedUser.customStatus,
+            bio: updatedUser.bio,
+            role: updatedUser.role,
+        });
     } catch (error) {
-        console.error('Send message error:', error);
-        res.status(500).json({ message: 'Failed to send message', error: error.message });
+        console.error('Update profile error:', error);
+        res.status(500).json({ message: 'Failed to update profile', error: error.message });
     }
 };
 
-// @desc    Get all messages for a conversation
-// @route   GET /api/messages/conversation/:conversationId
+// @desc    Update user status
+// @route   PUT /api/users/status
 // @access  Private
-const allMessages = async (req, res) => {
-    try {
-        const messages = await Message.find({ conversation: req.params.conversationId })
-            .populate('sender', 'username profilePicture email')
-            .populate('conversation');
-        res.json(messages);
-    } catch (error) {
-        res.status(400);
-        throw new Error(error.message);
+const updateUserStatus = async (req, res) => {
+    const { status } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (user) {
+        user.status = status;
+        await user.save();
+        res.json({ message: 'Status updated', status: user.status });
+    } else {
+        res.status(404).json({ message: 'User not found' });
     }
 };
 
-// @desc    Get all messages for a group
-// @route   GET /api/messages/group/:groupId
+// @desc    Search users
+// @route   GET /api/users/search
 // @access  Private
-const allGroupMessages = async (req, res) => {
-    try {
-        const messages = await Message.find({ group: req.params.groupId })
-            .populate('sender', 'username profilePicture email')
-            .populate('group');
-        res.json(messages);
-    } catch (error) {
-        res.status(400);
-        throw new Error(error.message);
-    }
+const searchUsers = async (req, res) => {
+    const keyword = req.query.search
+        ? {
+            $or: [
+                { username: { $regex: req.query.search, $options: 'i' } },
+                { email: { $regex: req.query.search, $options: 'i' } },
+            ],
+        }
+        : {};
+
+    const users = await User.find(keyword).find({ _id: { $ne: req.user.id } }).select('-password');
+    res.json(users);
 };
 
 module.exports = {
-    sendMessage,
-    allMessages,
-    allGroupMessages,
+    getUserProfile,
+    updateUserProfile,
+    updateUserStatus,
+    searchUsers,
 };
