@@ -33,7 +33,7 @@ app.use('/api', limiter);
 // CORS Configuration
 const allowedOrigins = [
     process.env.CLIENT_URL,
-    'https://real-time-chat-app-xi-mocha.vercel.app',  // Added Vercel frontend URL
+    'https://real-time-chat-app-xi-mocha.vercel.app',
     'http://localhost:5173',
     'http://localhost:5174',
     'http://localhost:3000',
@@ -88,15 +88,6 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 // Serve static files (uploads)
 const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'uploads');
 app.use('/uploads', express.static(uploadDir));
-
-// Serve Frontend in Production
-if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../client/dist')));
-    
-    app.get('/*', (req, res) => {  // Changed from '*' to '/*' - IMPORTANT FIX!
-        res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-    });
-}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
