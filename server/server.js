@@ -63,9 +63,13 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chat-app'
     .then(() => console.log('MongoDB connected successfully'))
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Socket.io Setup
+// Socket.io Setup with proper CORS - FIXED FOR REAL-TIME MESSAGING
 const io = new Server(server, {
-    cors: corsOptions
+    cors: {
+        origin: allowedOrigins,
+        methods: ['GET', 'POST'],
+        credentials: true
+    }
 });
 
 // Socket Handler
@@ -94,9 +98,9 @@ app.use((err, req, res, next) => {
     if (process.env.NODE_ENV !== 'production') {
         console.error(err.stack);
     }
-    res.status(500).json({ 
-        message: 'Something went wrong!', 
-        error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message 
+    res.status(500).json({
+        message: 'Something went wrong!',
+        error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
     });
 });
 
