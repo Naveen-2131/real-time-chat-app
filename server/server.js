@@ -33,7 +33,9 @@ app.use('/api', limiter);
 // CORS Configuration
 const allowedOrigins = [
     process.env.CLIENT_URL,
+    'https://real-time-chat-app-xi-mocha.vercel.app',  // Added Vercel frontend URL
     'http://localhost:5173',
+    'http://localhost:5174',
     'http://localhost:3000',
     process.env.CORS_ORIGIN
 ].filter(Boolean);
@@ -90,8 +92,8 @@ app.use('/uploads', express.static(uploadDir));
 // Serve Frontend in Production
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../client/dist')));
-
-    app.get('*', (req, res) => {
+    
+    app.get('/*', (req, res) => {  // Changed from '*' to '/*' - IMPORTANT FIX!
         res.sendFile(path.join(__dirname, '../client/dist/index.html'));
     });
 }
@@ -101,9 +103,9 @@ app.use((err, req, res, next) => {
     if (process.env.NODE_ENV !== 'production') {
         console.error(err.stack);
     }
-    res.status(500).json({
-        message: 'Something went wrong!',
-        error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message
+    res.status(500).json({ 
+        message: 'Something went wrong!', 
+        error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message 
     });
 });
 
