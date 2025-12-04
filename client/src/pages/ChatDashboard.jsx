@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import { chatService, userService, groupService } from '../services/api';
-import { FiUsers, FiImage, FiFile, FiDownload, FiInfo, FiMoon, FiSun, FiSearch, FiLogOut, FiShield, FiX } from 'react-icons/fi';
+import { FiUsers, FiImage, FiFile, FiDownload, FiInfo, FiMoon, FiSun, FiSearch, FiLogOut, FiShield, FiX, FiArrowLeft, FiMenu } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import FileUploadButton from '../components/FileUploadButton';
@@ -35,8 +35,25 @@ const ChatDashboard = () => {
     const [onlineUsers, setOnlineUsers] = useState(new Set());
     const [messageSearchQuery, setMessageSearchQuery] = useState('');
     const [showMsgSearch, setShowMsgSearch] = useState(false);
+
+    // Mobile responsive states
+    const [isMobileView, setIsMobileView] = useState(false);
+    const [showChatList, setShowChatList] = useState(true);
+
     const messagesEndRef = useRef(null);
     const fileUploadRef = useRef(null);
+
+    // Detect screen size for mobile view
+    useEffect(() => {
+        const checkMobileView = () => {
+            setIsMobileView(window.innerWidth < 768);
+        };
+
+        checkMobileView();
+        window.addEventListener('resize', checkMobileView);
+
+        return () => window.removeEventListener('resize', checkMobileView);
+    }, []);
 
     // Scroll to bottom of messages
     const scrollToBottom = () => {
@@ -287,6 +304,11 @@ const ChatDashboard = () => {
         setSelectedChat({ ...chat, isGroup });
         fetchMessages(chat._id, isGroup);
         socket.emit('join_conversation', chat._id);
+
+        // Hide chat list on mobile when chat is selected
+        if (isMobileView) {
+            setShowChatList(false);
+        }
     };
 
     const handleGroupCreated = (group) => {
@@ -335,245 +357,247 @@ const ChatDashboard = () => {
 
     return (
         <div className="flex h-screen bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300">
-            {/* Sidebar */}
-            <div className="w-1/4 bg-slate-800/80 backdrop-blur-md border-r border-slate-700/50 flex flex-col shadow-xl z-10">
-                {/* Header */}
-                <div className="p-4 border-b border-slate-700/50">
-                    <div className="flex justify-between items-center mb-6">
-                        <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => setShowProfileModal(true)}>
-                            <div className="relative">
-                                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px]">
-                                    <div className="w-full h-full rounded-full bg-slate-800 overflow-hidden">
-                                        {user?.profilePicture ? (
-                                            <img src={`${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-slate-700 text-primary font-bold text-xl">
-                                                {user?.username?.[0].toUpperCase()}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>
-                            </div>
-                            <div>
-                                <h2 className="font-bold text-white text-lg group-hover:text-primary transition-colors">{user?.username}</h2>
-                                <p className="text-xs text-slate-400">Online</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            {user?.role === 'admin' && (
-                                <button
-                                    onClick={() => navigate('/admin')}
-                                    className="p-2 rounded-full hover:bg-slate-700 text-slate-300 transition-all duration-200"
-                                    title="Admin Dashboard"
-                                >
-                                    <FiShield className="w-5 h-5" />
-                                </button>
-                            )}
-                            <button
-                                onClick={logout}
-                                className="p-2 rounded-full hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-all duration-200"
-                                title="Logout"
-                            >
-                                <FiLogOut className="w-5 h-5" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Tabs */}
-                    <div className="flex p-1 bg-slate-700/50 rounded-xl mb-4">
-                        <button
-                            onClick={() => setActiveTab('chats')}
-                            className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'chats'
-                                ? 'bg-slate-600 text-primary shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                        >
-                            Chats
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('groups')}
-                            className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'groups'
-                                ? 'bg-slate-600 text-primary shadow-sm'
-                                : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                        >
-                            Groups
-                        </button>
-                    </div>
-
-                    {/* Search */}
-                    <div className="relative">
-                        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search users..."
-                            value={searchQuery}
-                            onChange={handleSearch}
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-700/50 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                        />
-                    </div>
-                </div>
-
-                {/* Create Group Button */}
-                {activeTab === 'groups' && (
-                    <div className="px-4 py-3">
-                        <button
-                            onClick={() => setShowGroupModal(true)}
-                            className="w-full flex items-center justify-center space-x-2 py-2.5 bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white rounded-xl font-medium shadow-lg shadow-primary/20 transition-all transform hover:scale-[1.02]"
-                        >
-                            <FiUsers className="w-5 h-5" />
-                            <span>Create New Group</span>
-                        </button>
-                    </div>
-                )}
-
-                {/* Search Results or Conversations/Groups List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {searchResults.length > 0 ? (
-                        <>
-                            <h3 className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Search Results</h3>
-                            {searchResults.map((result) => (
-                                <div
-                                    key={result._id}
-                                    onClick={() => startChat(result._id)}
-                                    className="mx-2 px-3 py-3 rounded-xl hover:bg-slate-700/50 cursor-pointer flex items-center space-x-3 transition-all duration-200"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent p-[2px]">
-                                        <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
-                                            {result.profilePicture ? (
-                                                <img src={`${import.meta.env.VITE_SOCKET_URL}${result.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+            {/* Sidebar - Conditional for mobile */}
+            {(!isMobileView || showChatList) && (
+                <div className={`${isMobileView ? 'w-full' : 'w-1/4 md:w-1/3 lg:w-1/4'} bg-slate-800/80 backdrop-blur-md border-r border-slate-700/50 flex flex-col shadow-xl z-10 ${isMobileView ? 'animate-slide-in-left' : ''}`}>
+                    {/* Header */}
+                    <div className="p-4 border-b border-slate-700/50">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="flex items-center space-x-3 group cursor-pointer" onClick={() => setShowProfileModal(true)}>
+                                <div className="relative">
+                                    <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px]">
+                                        <div className="w-full h-full rounded-full bg-slate-800 overflow-hidden">
+                                            {user?.profilePicture ? (
+                                                <img src={`${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
                                             ) : (
-                                                <span className="text-secondary font-bold">{result.username[0].toUpperCase()}</span>
+                                                <div className="w-full h-full flex items-center justify-center bg-slate-700 text-primary font-bold text-xl">
+                                                    {user?.username?.[0].toUpperCase()}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-semibold text-slate-200">{result.username}</h4>
-                                        <p className="text-xs text-slate-400 truncate max-w-[150px]">{result.bio || 'Available'}</p>
-                                    </div>
+                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>
                                 </div>
-                            ))}
-                        </>
-                    ) : (
-                        <>
-                            {activeTab === 'chats' ? (
-                                conversations.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
-                                        <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                            <FiInfo className="w-8 h-8 text-slate-600" />
+                                <div>
+                                    <h2 className="font-bold text-white text-lg group-hover:text-primary transition-colors">{user?.username}</h2>
+                                    <p className="text-xs text-slate-400">Online</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                {user?.role === 'admin' && (
+                                    <button
+                                        onClick={() => navigate('/admin')}
+                                        className="p-2 rounded-full hover:bg-slate-700 text-slate-300 transition-all duration-200"
+                                        title="Admin Dashboard"
+                                    >
+                                        <FiShield className="w-5 h-5" />
+                                    </button>
+                                )}
+                                <button
+                                    onClick={logout}
+                                    className="p-2 rounded-full hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-all duration-200"
+                                    title="Logout"
+                                >
+                                    <FiLogOut className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex p-1 bg-slate-700/50 rounded-xl mb-4">
+                            <button
+                                onClick={() => setActiveTab('chats')}
+                                className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'chats'
+                                    ? 'bg-slate-600 text-primary shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                    }`}
+                            >
+                                Chats
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('groups')}
+                                className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all duration-200 ${activeTab === 'groups'
+                                    ? 'bg-slate-600 text-primary shadow-sm'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                    }`}
+                            >
+                                Groups
+                            </button>
+                        </div>
+
+                        {/* Search */}
+                        <div className="relative">
+                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search users..."
+                                value={searchQuery}
+                                onChange={handleSearch}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-700/50 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Create Group Button */}
+                    {activeTab === 'groups' && (
+                        <div className="px-4 py-3">
+                            <button
+                                onClick={() => setShowGroupModal(true)}
+                                className="w-full flex items-center justify-center space-x-2 py-2.5 bg-gradient-to-r from-primary to-secondary hover:opacity-90 text-white rounded-xl font-medium shadow-lg shadow-primary/20 transition-all transform hover:scale-[1.02]"
+                            >
+                                <FiUsers className="w-5 h-5" />
+                                <span>Create New Group</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Search Results or Conversations/Groups List */}
+                    <div className="flex-1 overflow-y-auto custom-scrollbar">
+                        {searchResults.length > 0 ? (
+                            <>
+                                <h3 className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Search Results</h3>
+                                {searchResults.map((result) => (
+                                    <div
+                                        key={result._id}
+                                        onClick={() => startChat(result._id)}
+                                        className="mx-2 px-3 py-3 rounded-xl hover:bg-slate-700/50 cursor-pointer flex items-center space-x-3 transition-all duration-200"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent p-[2px]">
+                                            <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
+                                                {result.profilePicture ? (
+                                                    <img src={`${import.meta.env.VITE_SOCKET_URL}${result.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-secondary font-bold">{result.username[0].toUpperCase()}</span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <p className="text-sm">No conversations yet.<br />Search for users to start chatting!</p>
+                                        <div>
+                                            <h4 className="font-semibold text-slate-200">{result.username}</h4>
+                                            <p className="text-xs text-slate-400 truncate max-w-[150px]">{result.bio || 'Available'}</p>
+                                        </div>
                                     </div>
-                                ) : (
-                                    conversations.map((chat) => (
-                                        <div
-                                            key={chat._id}
-                                            onClick={() => handleSelectChat(chat)}
-                                            className={`mx-2 px-3 py-3 rounded-xl cursor-pointer flex items-center space-x-3 transition-all duration-200 border-b border-transparent ${selectedChat?._id === chat._id
-                                                ? 'bg-primary/20 border-primary/10'
-                                                : 'hover:bg-slate-700/50'
-                                                }`}
-                                        >
-                                            <div className="relative">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 p-[2px]">
-                                                    <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
-                                                        {chat.participants.find(p => p._id !== user._id)?.profilePicture ? (
-                                                            <img src={`${import.meta.env.VITE_SOCKET_URL}${chat.participants.find(p => p._id !== user._id).profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <span className="text-indigo-500 font-bold text-lg">
-                                                                {chat.participants.find(p => p._id !== user._id)?.username[0].toUpperCase()}
+                                ))}
+                            </>
+                        ) : (
+                            <>
+                                {activeTab === 'chats' ? (
+                                    conversations.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
+                                            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                                                <FiInfo className="w-8 h-8 text-slate-600" />
+                                            </div>
+                                            <p className="text-sm">No conversations yet.<br />Search for users to start chatting!</p>
+                                        </div>
+                                    ) : (
+                                        conversations.map((chat) => (
+                                            <div
+                                                key={chat._id}
+                                                onClick={() => handleSelectChat(chat)}
+                                                className={`mx-2 px-3 py-3 rounded-xl cursor-pointer flex items-center space-x-3 transition-all duration-200 border-b border-transparent ${selectedChat?._id === chat._id
+                                                    ? 'bg-primary/20 border-primary/10'
+                                                    : 'hover:bg-slate-700/50'
+                                                    }`}
+                                            >
+                                                <div className="relative">
+                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 p-[2px]">
+                                                        <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
+                                                            {chat.participants.find(p => p._id !== user._id)?.profilePicture ? (
+                                                                <img src={`${import.meta.env.VITE_SOCKET_URL}${chat.participants.find(p => p._id !== user._id).profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="text-indigo-500 font-bold text-lg">
+                                                                    {chat.participants.find(p => p._id !== user._id)?.username[0].toUpperCase()}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {/* Online status indicator - only show if truly online (within 1 min) */}
+                                                    {isUserOnline(chat.participants.find(p => p._id !== user._id)?.lastSeen) && (
+                                                        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>
+                                                    )}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-baseline">
+                                                        <h4 className={`font-semibold truncate ${selectedChat?._id === chat._id ? 'text-primary-light' : 'text-slate-200'}`}>
+                                                            {chat.participants.find(p => p._id !== user._id)?.username}
+                                                        </h4>
+                                                        {chat.lastMessage && (
+                                                            <span className="text-[10px] text-slate-400">
+                                                                {new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                             </span>
                                                         )}
                                                     </div>
-                                                </div>
-                                                {/* Online status indicator - only show if truly online (within 1 min) */}
-                                                {isUserOnline(chat.participants.find(p => p._id !== user._id)?.lastSeen) && (
-                                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-800"></div>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-baseline">
-                                                    <h4 className={`font-semibold truncate ${selectedChat?._id === chat._id ? 'text-primary-light' : 'text-slate-200'}`}>
-                                                        {chat.participants.find(p => p._id !== user._id)?.username}
-                                                    </h4>
-                                                    {chat.lastMessage && (
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {new Date(chat.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
+                                                    {/* Show last seen instead of message preview if no messages */}
+                                                    {chat.lastMessage ? (
+                                                        <p className={`text-xs truncate ${selectedChat?._id === chat._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
+                                                            {chat.lastMessage.fileUrl ? (
+                                                                <span className="flex items-center"><FiFile className="mr-1" /> File</span>
+                                                            ) : (
+                                                                chat.lastMessage.content
+                                                            )}
+                                                        </p>
+                                                    ) : (
+                                                        <p className={`text-xs ${selectedChat?._id === chat._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
+                                                            {formatLastSeen(chat.participants.find(p => p._id !== user._id)?.lastSeen)}
+                                                        </p>
                                                     )}
                                                 </div>
-                                                {/* Show last seen instead of message preview if no messages */}
-                                                {chat.lastMessage ? (
-                                                    <p className={`text-xs truncate ${selectedChat?._id === chat._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
-                                                        {chat.lastMessage.fileUrl ? (
-                                                            <span className="flex items-center"><FiFile className="mr-1" /> File</span>
+                                            </div>
+                                        ))
+                                    )
+                                ) : (
+                                    groups.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
+                                            <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
+                                                <FiUsers className="w-8 h-8 text-slate-600" />
+                                            </div>
+                                            <p className="text-sm">No groups yet.<br />Create one to get started!</p>
+                                        </div>
+                                    ) : (
+                                        groups.map((group) => (
+                                            <div
+                                                key={group._id}
+                                                onClick={() => handleSelectChat(group, true)}
+                                                className={`mx-2 px-3 py-3 rounded-xl cursor-pointer flex items-center space-x-3 transition-all duration-200 border-b border-transparent ${selectedChat?._id === group._id
+                                                    ? 'bg-primary/20 border-primary/10'
+                                                    : 'hover:bg-slate-700/50'
+                                                    }`}
+                                            >
+                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 p-[2px]">
+                                                    <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
+                                                        <FiUsers className="w-6 h-6 text-pink-500" />
+                                                    </div>
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-baseline">
+                                                        <h4 className={`font-semibold truncate ${selectedChat?._id === group._id ? 'text-primary-light' : 'text-slate-200'}`}>
+                                                            {group.name}
+                                                        </h4>
+                                                        {group.lastMessage && (
+                                                            <span className="text-[10px] text-slate-400">
+                                                                {new Date(group.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className={`text-xs truncate ${selectedChat?._id === group._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
+                                                        {group.lastMessage ? (
+                                                            <span>
+                                                                <span className="font-medium text-slate-300">{group.lastMessage.sender.username}: </span>
+                                                                {group.lastMessage.fileUrl ? 'Sent a file' : group.lastMessage.content}
+                                                            </span>
                                                         ) : (
-                                                            chat.lastMessage.content
+                                                            <span className="italic">No messages yet</span>
                                                         )}
                                                     </p>
-                                                ) : (
-                                                    <p className={`text-xs ${selectedChat?._id === chat._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
-                                                        {formatLastSeen(chat.participants.find(p => p._id !== user._id)?.lastSeen)}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                    ))
-                                )
-                            ) : (
-                                groups.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-full text-slate-400 p-6 text-center">
-                                        <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-4">
-                                            <FiUsers className="w-8 h-8 text-slate-600" />
-                                        </div>
-                                        <p className="text-sm">No groups yet.<br />Create one to get started!</p>
-                                    </div>
-                                ) : (
-                                    groups.map((group) => (
-                                        <div
-                                            key={group._id}
-                                            onClick={() => handleSelectChat(group, true)}
-                                            className={`mx-2 px-3 py-3 rounded-xl cursor-pointer flex items-center space-x-3 transition-all duration-200 border-b border-transparent ${selectedChat?._id === group._id
-                                                ? 'bg-primary/20 border-primary/10'
-                                                : 'hover:bg-slate-700/50'
-                                                }`}
-                                        >
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 p-[2px]">
-                                                <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
-                                                    <FiUsers className="w-6 h-6 text-pink-500" />
                                                 </div>
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-baseline">
-                                                    <h4 className={`font-semibold truncate ${selectedChat?._id === group._id ? 'text-primary-light' : 'text-slate-200'}`}>
-                                                        {group.name}
-                                                    </h4>
-                                                    {group.lastMessage && (
-                                                        <span className="text-[10px] text-slate-400">
-                                                            {new Date(group.lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <p className={`text-xs truncate ${selectedChat?._id === group._id ? 'text-primary-light/70' : 'text-slate-400'}`}>
-                                                    {group.lastMessage ? (
-                                                        <span>
-                                                            <span className="font-medium text-slate-300">{group.lastMessage.sender.username}: </span>
-                                                            {group.lastMessage.fileUrl ? 'Sent a file' : group.lastMessage.content}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="italic">No messages yet</span>
-                                                    )}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))
-                                )
-                            )}
-                        </>
-                    )}
+                                        ))
+                                    )
+                                )}
+                            </>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Main Chat Area */}
             <div className="flex-1 flex flex-col bg-slate-900/50 backdrop-blur-sm relative">
@@ -582,6 +606,17 @@ const ChatDashboard = () => {
                         {/* Chat Header */}
                         <div className="p-4 bg-slate-800/80 backdrop-blur-md border-b border-slate-700/50 flex justify-between items-center shadow-sm z-10">
                             <div className="flex items-center space-x-4">
+                                {/* Back button for mobile */}
+                                {isMobileView && (
+                                    <button
+                                        onClick={() => setShowChatList(true)}
+                                        className="p-2 rounded-full hover:bg-slate-700 text-slate-300 transition-all duration-200 active:scale-95"
+                                        title="Back to chats"
+                                    >
+                                        <FiArrowLeft className="w-5 h-5" />
+                                    </button>
+                                )}
+
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary p-[2px]">
                                     <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                         {selectedChat.isGroup ? (
