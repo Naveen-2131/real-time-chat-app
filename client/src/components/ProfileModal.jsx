@@ -90,7 +90,14 @@ const ProfileModal = ({ isOpen, onClose }) => {
                                 {avatarPreview ? (
                                     <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : user?.profilePicture ? (
-                                    <img src={`${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`} alt="Avatar" className="w-full h-full object-cover" />
+                                    <img
+                                        src={user.profilePicture.startsWith('data:')
+                                            ? user.profilePicture
+                                            : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`
+                                        }
+                                        alt="Avatar"
+                                        className="w-full h-full object-cover"
+                                    />
                                 ) : (
                                     user?.username[0].toUpperCase()
                                 )}
