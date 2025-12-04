@@ -168,8 +168,19 @@ const CreateGroupModal = ({ isOpen, onClose, onGroupCreated }) => {
                                     className={`flex items-center space-x-3 p-3 cursor-pointer hover:bg-slate-700 ${selectedUsers.find(u => u._id === user._id) ? 'bg-primary/5' : ''
                                         }`}
                                 >
-                                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-white font-bold">
-                                        {user.username[0].toUpperCase()}
+                                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-white font-bold overflow-hidden">
+                                        {user.profilePicture ? (
+                                            <img
+                                                src={user.profilePicture.startsWith('data:')
+                                                    ? user.profilePicture
+                                                    : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`
+                                                }
+                                                alt={user.username}
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            user.username[0].toUpperCase()
+                                        )}
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-medium text-white">{user.username}</p>
