@@ -106,14 +106,20 @@ const httpServer = server.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
 
-// Graceful Shutdown
+// Graceful Shutdown - Fixed for Mongoose 9.x
 process.on('SIGTERM', () => {
     console.log('SIGTERM signal received: closing HTTP server');
     httpServer.close(() => {
         console.log('HTTP server closed');
-        mongoose.connection.close(false, () => {
-            console.log('MongoDB connection closed');
-            process.exit(0);
-        });
+        // Mongoose 9.x no longer accepts callback - use promise instead
+        mongoose.connection.close()
+            .then(() => {
+                console.log('MongoDB connection closed');
+                process.exit(0);
+            })
+            .catch(err => {
+                console.error('Error closing MongoDB:', err);
+                process.exit(1);
+            });
     });
 });
