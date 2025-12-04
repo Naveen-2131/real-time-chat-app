@@ -335,14 +335,18 @@ const ChatDashboard = () => {
     const renderFilePreview = (msg) => {
         if (!msg.fileUrl) return null;
 
+        const getFileUrl = (url) => {
+            return url.startsWith('data:') ? url : `${import.meta.env.VITE_SOCKET_URL}${url}`;
+        };
+
         if (msg.fileType === 'image') {
             return (
                 <div className="mt-2">
                     <img
-                        src={`${import.meta.env.VITE_SOCKET_URL}${msg.fileUrl}`}
+                        src={getFileUrl(msg.fileUrl)}
                         alt={msg.fileName}
                         className="max-w-xs rounded-lg cursor-pointer hover:opacity-90"
-                        onClick={() => window.open(`${import.meta.env.VITE_SOCKET_URL}${msg.fileUrl}`, '_blank')}
+                        onClick={() => window.open(getFileUrl(msg.fileUrl), '_blank')}
                     />
                 </div>
             );
@@ -350,7 +354,7 @@ const ChatDashboard = () => {
             return (
                 <div className="mt-2">
                     <video
-                        src={`${import.meta.env.VITE_SOCKET_URL}${msg.fileUrl}`}
+                        src={getFileUrl(msg.fileUrl)}
                         controls
                         className="max-w-xs rounded-lg"
                     />
@@ -359,7 +363,7 @@ const ChatDashboard = () => {
         } else {
             return (
                 <a
-                    href={`${import.meta.env.VITE_SOCKET_URL}${msg.fileUrl}`}
+                    href={getFileUrl(msg.fileUrl)}
                     download={msg.fileName}
                     className="flex items-center space-x-2 mt-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
                 >
@@ -906,4 +910,3 @@ const ChatDashboard = () => {
 };
 
 export default ChatDashboard;
-
