@@ -436,7 +436,7 @@ const ChatDashboard = () => {
                                     : 'text-slate-400 hover:text-slate-200'
                                     }`}
                             >
-                                Chats
+                                Chats v1.2
                             </button>
                             <button
                                 onClick={() => setActiveTab('groups')}
