@@ -23,13 +23,20 @@ const sendMessage = async (req, res) => {
         let fileData = {};
 
         if (req.file) {
-            console.log('Processing file:', req.file.filename);
+            console.log('Processing file:', req.file.originalname);
+
+            // Convert to base64
+            const base64File = req.file.buffer.toString('base64');
+            const mimeType = req.file.mimetype;
+            const dataUrl = `data:${mimeType};base64,${base64File}`;
+
             fileData = {
-                fileUrl: `/uploads/${req.file.filename}`,
+                fileUrl: dataUrl,
                 fileType: req.file.mimetype.split('/')[0], // 'image', 'video', etc.
                 fileName: req.file.originalname,
                 fileSize: req.file.size
             };
+            console.log('File converted to base64');
         }
 
         if (!content && !req.file) {
