@@ -388,7 +388,11 @@ const ChatDashboard = () => {
                                     <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-primary to-secondary p-[2px]">
                                         <div className="w-full h-full rounded-full bg-slate-800 overflow-hidden">
                                             {user?.profilePicture ? (
-                                                <img src={`${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                <img
+                                                    src={user.profilePicture.startsWith('data:') ? user.profilePicture : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`}
+                                                    alt="Profile"
+                                                    className="w-full h-full object-cover"
+                                                />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-slate-700 text-primary font-bold text-xl">
                                                     {user?.username?.[0].toUpperCase()}
@@ -469,7 +473,8 @@ const ChatDashboard = () => {
                                 <span>Create New Group</span>
                             </button>
                         </div>
-                    )}
+                    )
+                    }
 
                     {/* Search Results or Conversations/Groups List */}
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -485,7 +490,7 @@ const ChatDashboard = () => {
                                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent p-[2px]">
                                             <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                                 {result.profilePicture ? (
-                                                    <img src={`${import.meta.env.VITE_SOCKET_URL}${result.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                    <img src={result.profilePicture.startsWith('data:') ? result.profilePicture : `${import.meta.env.VITE_SOCKET_URL}${result.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <span className="text-secondary font-bold">{result.username[0].toUpperCase()}</span>
                                                 )}
@@ -643,7 +648,7 @@ const ChatDashboard = () => {
                             </>
                         )}
                     </div>
-                </div>
+                </div >
             )}
 
             {/* Main Chat Area */}
