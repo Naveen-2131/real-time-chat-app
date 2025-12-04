@@ -36,16 +36,26 @@ const updateUserProfile = async (req, res) => {
 
         // Handle avatar upload - Convert to base64 and store in DB
         if (req.file) {
-            console.log('Processing file upload:', req.file.filename);
+            console.log('Processing file upload:', req.file.originalname);
 
-            // Convert file to base64
-            const base64Image = req.file.buffer.toString('base64');
-            const mimeType = req.file.mimetype;
+            let base64Image;
+            if (req.file.buffer) {
+                // Memory storage
+                base64Image = req.file.buffer.toString('base64');
+            } else if (req.file.path) {
+                // Disk storage fallback
+                const fs = require('fs');
+                const fileBuffer = fs.readFileSync(req.file.path);
+                base64Image = fileBuffer.toString('base64');
+                // Clean up temp file
+                try { fs.unlinkSync(req.file.path); } catch (e) { }
+            }
 
-            // Store as data URL (data:image/png;base64,...)
-            user.profilePicture = `data:${mimeType};base64,${base64Image}`;
-
-            console.log('Profile picture converted to base64 and stored in DB');
+            if (base64Image) {
+                const mimeType = req.file.mimetype;
+                user.profilePicture = `data:${mimeType};base64,${base64Image}`;
+                console.log('Profile picture converted to base64 and stored in DB');
+            }
         }
 
         if (req.body.password) {
