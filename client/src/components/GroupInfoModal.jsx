@@ -185,8 +185,19 @@ const GroupInfoModal = ({ isOpen, onClose, group, onGroupUpdated }) => {
                                         className="flex items-center justify-between p-3 hover:bg-slate-700"
                                     >
                                         <div className="flex items-center space-x-3">
-                                            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold">
-                                                {user.username[0].toUpperCase()}
+                                            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white text-sm font-bold overflow-hidden">
+                                                {user.profilePicture ? (
+                                                    <img
+                                                        src={user.profilePicture.startsWith('data:')
+                                                            ? user.profilePicture
+                                                            : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`
+                                                        }
+                                                        alt={user.username}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    user.username[0].toUpperCase()
+                                                )}
                                             </div>
                                             <span className="text-sm text-white">{user.username}</span>
                                         </div>
@@ -214,8 +225,19 @@ const GroupInfoModal = ({ isOpen, onClose, group, onGroupUpdated }) => {
                                     className="flex items-center justify-between p-3 bg-slate-700 rounded-lg"
                                 >
                                     <div className="flex items-center space-x-3">
-                                        <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-bold">
-                                            {member.username[0].toUpperCase()}
+                                        <div className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white font-bold overflow-hidden">
+                                            {member.profilePicture ? (
+                                                <img
+                                                    src={member.profilePicture.startsWith('data:')
+                                                        ? member.profilePicture
+                                                        : `${import.meta.env.VITE_SOCKET_URL}${member.profilePicture}`
+                                                    }
+                                                    alt={member.username}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                member.username[0].toUpperCase()
+                                            )}
                                         </div>
                                         <div>
                                             <p className="font-medium text-white">{member.username}</p>
