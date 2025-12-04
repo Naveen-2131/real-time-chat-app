@@ -21,7 +21,6 @@ const updateUserProfile = async (req, res) => {
         console.log('User ID:', req.user?.id);
         console.log('Body:', req.body);
         console.log('File:', req.file);
-        console.log('Files:', req.files);
 
         const user = await User.findById(req.user.id);
 
@@ -35,10 +34,18 @@ const updateUserProfile = async (req, res) => {
         user.customStatus = req.body.customStatus || user.customStatus;
         user.bio = req.body.bio !== undefined ? req.body.bio : user.bio;
 
-        // Handle avatar upload
+        // Handle avatar upload - Convert to base64 and store in DB
         if (req.file) {
             console.log('Processing file upload:', req.file.filename);
-            user.profilePicture = `/uploads/${req.file.filename}`;
+
+            // Convert file to base64
+            const base64Image = req.file.buffer.toString('base64');
+            const mimeType = req.file.mimetype;
+
+            // Store as data URL (data:image/png;base64,...)
+            user.profilePicture = `data:${mimeType};base64,${base64Image}`;
+
+            console.log('Profile picture converted to base64 and stored in DB');
         }
 
         if (req.body.password) {
