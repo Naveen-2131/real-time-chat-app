@@ -38,7 +38,7 @@ export const showNotification = (title, options = {}) => {
 
     const {
         body = '',
-        icon = '/logo.png',
+        icon = '/vite.svg',
         tag = 'chat-notification',
         onClick = null
     } = options;
@@ -47,7 +47,7 @@ export const showNotification = (title, options = {}) => {
         body,
         icon,
         tag,
-        badge: '/badge.png',
+        badge: '/vite.svg',
         requireInteraction: false,
         silent: false
     });
@@ -113,15 +113,16 @@ export const isAppInFocus = () => {
  */
 export const showMessageNotification = (message, senderName, isGroup = false) => {
     // Don't show notification if app is in focus
-    if (isAppInFocus()) {
-        return;
-    }
+    // if (isAppInFocus()) {
+    //     return;
+    // }
 
     const title = isGroup ? `${senderName} in ${message.groupName}` : senderName;
     const body = message.content || (message.fileUrl ? '📎 Sent a file' : 'New message');
 
     showNotification(title, {
         body,
+        icon: '/vite.svg', // Use vite.svg as logo.png is missing
         tag: `message-${message._id}`,
         onClick: () => {
             window.focus();
