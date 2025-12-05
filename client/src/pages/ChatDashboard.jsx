@@ -675,7 +675,14 @@ const ChatDashboard = () => {
                                             <FiUsers className="w-5 h-5 text-primary" />
                                         ) : (
                                             selectedChat.participants.find(p => p._id !== user._id)?.profilePicture ? (
-                                                <img src={`${import.meta.env.VITE_SOCKET_URL}${selectedChat.participants.find(p => p._id !== user._id).profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                <img
+                                                    src={selectedChat.participants.find(p => p._id !== user._id).profilePicture.startsWith('data:')
+                                                        ? selectedChat.participants.find(p => p._id !== user._id).profilePicture
+                                                        : `${import.meta.env.VITE_SOCKET_URL}${selectedChat.participants.find(p => p._id !== user._id).profilePicture}`
+                                                    }
+                                                    alt="Profile"
+                                                    className="w-full h-full object-cover"
+                                                />
                                             ) : (
                                                 <span className="text-primary font-bold">{selectedChat.participants.find(p => p._id !== user._id)?.username[0].toUpperCase()}</span>
                                             )
