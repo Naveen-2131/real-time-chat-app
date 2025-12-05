@@ -77,35 +77,40 @@ const sendMessage = async (req, res) => {
                 select: 'username profilePicture email',
             });
 
+
             // Update last message and increment unread count for other participants
             const conversation = await Conversation.findById(conversationId);
-            conversation.lastMessage = message;
+            if (conversation) {
+                conversation.lastMessage = message;
 
-            // Increment unread count for all participants except sender
-            conversation.participants.forEach(participantId => {
-                if (participantId.toString() !== req.user.id) {
-                    const currentCount = conversation.unreadCount.get(participantId.toString()) || 0;
-                    conversation.unreadCount.set(participantId.toString(), currentCount + 1);
-                }
-            });
+                // Increment unread count for all participants except sender
+                conversation.participants.forEach(participantId => {
+                    if (participantId.toString() !== req.user.id) {
+                        const currentCount = conversation.unreadCount.get(participantId.toString()) || 0;
+                        conversation.unreadCount.set(participantId.toString(), currentCount + 1);
+                    }
+                });
 
-            await conversation.save();
+                await conversation.save();
+            }
         } else if (groupId) {
             message = await message.populate('group');
 
             // Update last message and increment unread count for other members
             const group = await Group.findById(groupId);
-            group.lastMessage = message;
+            if (group) {
+                group.lastMessage = message;
 
-            // Increment unread count for all members except sender
-            group.members.forEach(memberId => {
-                if (memberId.toString() !== req.user.id) {
-                    const currentCount = group.unreadCount.get(memberId.toString()) || 0;
-                    group.unreadCount.set(memberId.toString(), currentCount + 1);
-                }
-            });
+                // Increment unread count for all members except sender
+                group.members.forEach(memberId => {
+                    if (memberId.toString() !== req.user.id) {
+                        const currentCount = group.unreadCount.get(memberId.toString()) || 0;
+                        group.unreadCount.set(memberId.toString(), currentCount + 1);
+                    }
+                });
 
-            await group.save();
+                await group.save();
+            }
         }
 
         console.log('Message sent successfully');
