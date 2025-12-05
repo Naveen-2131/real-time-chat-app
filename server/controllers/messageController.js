@@ -76,10 +76,36 @@ const sendMessage = async (req, res) => {
                 path: 'conversation.participants',
                 select: 'username profilePicture email',
             });
-            await Conversation.findByIdAndUpdate(conversationId, { lastMessage: message });
+
+            // Update last message and increment unread count for other participants
+            const conversation = await Conversation.findById(conversationId);
+            conversation.lastMessage = message;
+
+            // Increment unread count for all participants except sender
+            conversation.participants.forEach(participantId => {
+                if (participantId.toString() !== req.user.id) {
+                    const currentCount = conversation.unreadCount.get(participantId.toString()) || 0;
+                    conversation.unreadCount.set(participantId.toString(), currentCount + 1);
+                }
+            });
+
+            await conversation.save();
         } else if (groupId) {
             message = await message.populate('group');
-            await Group.findByIdAndUpdate(groupId, { lastMessage: message });
+
+            // Update last message and increment unread count for other members
+            const group = await Group.findById(groupId);
+            group.lastMessage = message;
+
+            // Increment unread count for all members except sender
+            group.members.forEach(memberId => {
+                if (memberId.toString() !== req.user.id) {
+                    const currentCount = group.unreadCount.get(memberId.toString()) || 0;
+                    group.unreadCount.set(memberId.toString(), currentCount + 1);
+                }
+            });
+
+            await group.save();
         }
 
         console.log('Message sent successfully');
@@ -120,6 +146,34 @@ const allGroupMessages = async (req, res) => {
     }
 };
 
+// @desc    Mark messages as read (reset unread count)
+// @route   PUT /api/messages/mark-read/:conversationId
+// @access  Private
+const markAsRead = async (req, res) => {
+    try {
+        const { conversationId, groupId } = req.params;
+
+        if (conversationId) {
+            const conversation = await Conversation.findById(conversationId);
+            if (conversation) {
+                conversation.unreadCount.set(req.user.id, 0);
+                await conversation.save();
+            }
+        } else if (groupId) {
+            const group = await Group.findById(groupId);
+            if (group) {
+                group.unreadCount.set(req.user.id, 0);
+                await group.save();
+            }
+        }
+
+        res.json({ message: 'Marked as read' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 exports.sendMessage = sendMessage;
 exports.allMessages = allMessages;
 exports.allGroupMessages = allGroupMessages;
+exports.markAsRead = markAsRead;
