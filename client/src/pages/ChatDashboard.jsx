@@ -95,7 +95,10 @@ const ChatDashboard = () => {
                     toast.success(`New message from ${senderName}`);
                 }
 
-                if (selectedChat && (selectedChat._id === message.conversation || selectedChat._id === message.group)) {
+                const msgConversationId = message.conversation?._id || message.conversation;
+                const msgGroupId = message.group?._id || message.group;
+
+                if (selectedChat && (selectedChat._id === msgConversationId || selectedChat._id === msgGroupId)) {
                     setMessages((prev) => [...prev, message]);
                 }
                 // Refresh conversations list to update last message
