@@ -64,6 +64,8 @@ export const chatService = {
         }
         return api.post('/messages', data);
     },
+    markAsRead: (conversationId) => api.put(`/messages/mark-read/conversation/${conversationId}`),
+    markGroupAsRead: (groupId) => api.put(`/messages/mark-read/group/${groupId}`),
 };
 
 export const groupService = {
