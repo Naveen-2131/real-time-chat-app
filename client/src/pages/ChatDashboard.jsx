@@ -319,10 +319,24 @@ const ChatDashboard = () => {
         }
     };
 
-    const handleSelectChat = (chat, isGroup = false) => {
+    const handleSelectChat = async (chat, isGroup = false) => {
         setSelectedChat({ ...chat, isGroup });
         fetchMessages(chat._id, isGroup);
         socket.emit('join_conversation', chat._id);
+
+        // Mark messages as read
+        try {
+            if (isGroup) {
+                await chatService.markGroupAsRead(chat._id);
+            } else {
+                await chatService.markAsRead(chat._id);
+            }
+            // Refresh conversations to update unread count
+            fetchConversations();
+            fetchGroups();
+        } catch (error) {
+            console.error('Failed to mark as read', error);
+        }
 
         // Hide chat list on mobile when chat is selected
         if (isMobileView) {
