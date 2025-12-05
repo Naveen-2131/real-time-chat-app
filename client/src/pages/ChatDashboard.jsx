@@ -790,7 +790,14 @@ const ChatDashboard = () => {
                                                 <div className={`w-8 h-8 rounded-full mr-2 flex-shrink-0 bg-gradient-to-br from-secondary to-accent p-[1px] ${showAvatar ? 'opacity-100' : 'opacity-0'}`}>
                                                     <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                                         {msg.sender.profilePicture ? (
-                                                            <img src={`${import.meta.env.VITE_SOCKET_URL}${msg.sender.profilePicture}`} alt="Avatar" className="w-full h-full object-cover" />
+                                                            <img
+                                                                src={msg.sender.profilePicture.startsWith('data:')
+                                                                    ? msg.sender.profilePicture
+                                                                    : `${import.meta.env.VITE_SOCKET_URL}${msg.sender.profilePicture}`
+                                                                }
+                                                                alt="Avatar"
+                                                                className="w-full h-full object-cover"
+                                                            />
                                                         ) : (
                                                             <span className="text-[10px] font-bold text-secondary">{msg.sender.username[0].toUpperCase()}</span>
                                                         )}
