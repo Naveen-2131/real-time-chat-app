@@ -39,11 +39,16 @@ module.exports = (io) => {
 
         // Send message
         socket.on('send_message', (message) => {
-            const { conversationId, groupId } = message;
+            // Handle both populated objects and plain IDs
+            const conversationId = message.conversation?._id || message.conversation || message.conversationId;
+            const groupId = message.group?._id || message.group || message.groupId;
             const room = conversationId || groupId;
 
             if (room) {
+                console.log(`Broadcasting message to room: ${room}`);
                 socket.to(room).emit('new_message', message);
+            } else {
+                console.error('No room found for message:', message);
             }
         });
 
