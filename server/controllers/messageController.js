@@ -78,10 +78,16 @@ const sendMessage = async (req, res) => {
             });
 
 
+
             // Update last message and increment unread count for other participants
             const conversation = await Conversation.findById(conversationId);
             if (conversation) {
                 conversation.lastMessage = message;
+
+                // Initialize unreadCount if it doesn't exist (for old conversations)
+                if (!conversation.unreadCount) {
+                    conversation.unreadCount = new Map();
+                }
 
                 // Increment unread count for all participants except sender
                 conversation.participants.forEach(participantId => {
@@ -100,6 +106,11 @@ const sendMessage = async (req, res) => {
             const group = await Group.findById(groupId);
             if (group) {
                 group.lastMessage = message;
+
+                // Initialize unreadCount if it doesn't exist (for old groups)
+                if (!group.unreadCount) {
+                    group.unreadCount = new Map();
+                }
 
                 // Increment unread count for all members except sender
                 group.members.forEach(memberId => {
@@ -161,12 +172,20 @@ const markAsRead = async (req, res) => {
         if (conversationId) {
             const conversation = await Conversation.findById(conversationId);
             if (conversation) {
+                // Initialize unreadCount if it doesn't exist (for old conversations)
+                if (!conversation.unreadCount) {
+                    conversation.unreadCount = new Map();
+                }
                 conversation.unreadCount.set(req.user.id, 0);
                 await conversation.save();
             }
         } else if (groupId) {
             const group = await Group.findById(groupId);
             if (group) {
+                // Initialize unreadCount if it doesn't exist (for old groups)
+                if (!group.unreadCount) {
+                    group.unreadCount = new Map();
+                }
                 group.unreadCount.set(req.user.id, 0);
                 await group.save();
             }
