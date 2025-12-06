@@ -7,6 +7,7 @@ const storage = multer.memoryStorage();
 // Check file type
 function checkFileType(file, cb) {
     // Allowed mimetypes
+    // Allowed mimetypes
     const allowedMimetypes = [
         'image/jpeg',
         'image/jpg',
@@ -15,13 +16,15 @@ function checkFileType(file, cb) {
         'video/mp4',
         'application/pdf',
         'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
     ];
 
     // Allowed extensions
-    const filetypes = /jpeg|jpg|png|gif|mp4|pdf|doc|docx/;
+    const filetypes = /jpeg|jpg|png|gif|mp4|pdf|doc|docx|txt/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetypeAllowed = allowedMimetypes.includes(file.mimetype);
+    // Check mime type (relaxed: if extension matches and mimetype is generic application/octet-stream, allow it)
+    const mimetypeAllowed = allowedMimetypes.includes(file.mimetype) || (file.mimetype === 'application/octet-stream' && extname);
 
     console.log('File validation:', {
         filename: file.originalname,
@@ -30,18 +33,18 @@ function checkFileType(file, cb) {
         mimetypeAllowed: mimetypeAllowed
     });
 
-    if (mimetypeAllowed && extname) {
+    if (extname && mimetypeAllowed) {
         return cb(null, true);
     } else {
         console.log('File rejected:', file.mimetype, file.originalname);
-        cb('Error: Images, Videos, and Documents Only!');
+        cb('Error: Invalid file type! Allowed: Images, Videos, PDF, DOC, DOCX');
     }
 }
 
 // Init upload - use any() to accept any field name
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 50000000 }, // 50MB
+    limits: { fileSize: 10000000 }, // 10MB (Safe for MongoDB 16MB limit)
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     }
