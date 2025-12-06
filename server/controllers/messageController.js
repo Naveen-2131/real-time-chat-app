@@ -176,7 +176,10 @@ const markAsRead = async (req, res) => {
                 if (!conversation.unreadCount) {
                     conversation.unreadCount = new Map();
                 }
+                console.log('Marking as read for user:', req.user.id);
+                console.log('Current unreadCount keys:', Array.from(conversation.unreadCount.keys()));
                 conversation.unreadCount.set(req.user.id, 0);
+                conversation.markModified('unreadCount');
                 await conversation.save();
             }
         } else if (groupId) {
@@ -187,6 +190,7 @@ const markAsRead = async (req, res) => {
                     group.unreadCount = new Map();
                 }
                 group.unreadCount.set(req.user.id, 0);
+                group.markModified('unreadCount');
                 await group.save();
             }
         }
