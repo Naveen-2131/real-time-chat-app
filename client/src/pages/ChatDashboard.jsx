@@ -382,7 +382,7 @@ const ChatDashboard = () => {
                 <a
                     href={getFileUrl(msg.fileUrl)}
                     download={msg.fileName}
-                    className="flex items-center space-x-2 mt-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
+                    className="flex items-center space-x-2 mt-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200"
                 >
                     <FiFile className="w-5 h-5" />
                     <span className="text-sm">{msg.fileName}</span>
