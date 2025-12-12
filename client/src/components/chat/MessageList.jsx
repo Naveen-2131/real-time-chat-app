@@ -78,7 +78,19 @@ const MessageList = ({
                         src={getFileUrl(msg.fileUrl)}
                         alt={msg.fileName}
                         className="max-w-xs rounded-lg cursor-pointer hover:opacity-90"
-                        onClick={() => window.open(getFileUrl(msg.fileUrl), '_blank')}
+                        onClick={() => {
+                            const url = getFileUrl(msg.fileUrl);
+                            // For data URLs, create a temporary link and click it
+                            if (url.startsWith('data:')) {
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.download = msg.fileName || 'image';
+                                link.click();
+                            } else {
+                                // For regular URLs, open in new tab
+                                window.open(url, '_blank');
+                            }
+                        }}
                     />
                 </div>
             );
