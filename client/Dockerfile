@@ -21,11 +21,12 @@ FROM nginx:alpine
 # Copy built assets from builder stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx config if needed (optional, using default for now)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config for SPA routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80
 
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
+
