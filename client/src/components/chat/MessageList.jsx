@@ -62,7 +62,13 @@ const MessageList = ({
         if (!msg.fileUrl) return null;
 
         const getFileUrl = (url) => {
-            return url.startsWith('data:') ? url : `${import.meta.env.VITE_SOCKET_URL}${url}`;
+            // If it's a data URL (base64), return as-is
+            if (url.startsWith('data:')) return url;
+            // If it's already a full URL, return as-is
+            if (url.startsWith('http')) return url;
+            // Otherwise, construct the full URL using the API base URL
+            const apiUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+            return `${apiUrl}${url}`;
         };
 
         if (msg.fileType === 'image') {
