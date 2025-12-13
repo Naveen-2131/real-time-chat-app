@@ -22,11 +22,44 @@ const FileViewerModal = ({ isOpen, onClose, file }) => {
 
     if (!isOpen || !file) return null;
 
-    const handleDownload = () => {
-        const link = document.createElement('a');
-        link.href = file.url;
-        link.download = file.name || 'download';
-        link.click();
+    const handleDownload = async () => {
+        try {
+            // For data URLs, download directly
+            if (file.url.startsWith('data:')) {
+                const link = document.createElement('a');
+                link.href = file.url;
+                link.download = file.name || 'download';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                return;
+            }
+
+            // For regular URLs, fetch and create blob
+            const response = await fetch(file.url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = file.name || 'download';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up blob URL
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback: try direct download
+            const link = document.createElement('a');
+            link.href = file.url;
+            link.download = file.name || 'download';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
     };
 
     const handleBackdropClick = (e) => {
