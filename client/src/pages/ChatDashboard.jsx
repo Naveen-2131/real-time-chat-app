@@ -154,8 +154,8 @@ const ChatDashboard = () => {
                     toast.success(`New message from ${message.sender.username}`);
                 }
 
-                const msgConversationId = message.conversation?._id || message.conversation;
-                const msgGroupId = message.group?._id || message.group;
+                const msgConversationId = message.conversation?._id || message.conversation || message.conversationId;
+                const msgGroupId = message.group?._id || message.group || message.groupId;
                 const currentChat = selectedChatRef.current; // access via ref to be safe
 
                 // Normalize IDs for comparison
@@ -164,6 +164,16 @@ const ChatDashboard = () => {
                 const groupIdStr = msgGroupId ? String(msgGroupId) : null;
 
                 const isMatch = currentIdStr && (currentIdStr === msgIdStr || currentIdStr === groupIdStr);
+
+                // DEBUG: Detailed log for matching logic
+                console.log('[CLIENT] Message Match Check:', {
+                    msgId: message._id,
+                    msgConvId: msgIdStr,
+                    msgGroupId: groupIdStr,
+                    currentChatId: currentIdStr,
+                    isMatch,
+                    rawMessage: message
+                });
 
                 // Update active chat messages
                 if (isMatch) {
