@@ -104,7 +104,16 @@ const ChatDashboard = () => {
         if (socket && user) {
             const handleReconnection = () => {
                 console.log('[CLIENT] Socket reconnected');
-                socket.emit('join_with_data', { userId: user._id, username: user.username });
+                // DEBUG: Show connection status
+                toast.success(`Connected! ID: ${socket.id?.substring(0, 4)}`, { id: 'conn-success', duration: 2000 });
+
+                if (user && user._id) {
+                    socket.emit('join_with_data', { userId: user._id, username: user.username });
+                    // DEBUG: Show room join
+                    toast('Joining Room: ' + user._id.substring(0, 4), { icon: '🔌' });
+                } else {
+                    toast.error('NO USER ID FOUND!');
+                }
 
                 // Re-join all rooms
                 conversations.forEach(chat => socket.emit('join_conversation', chat._id));
@@ -122,6 +131,8 @@ const ChatDashboard = () => {
             socket.on('reconnect', handleReconnection);
 
             socket.on('new_message', (message) => {
+                // DEBUG: Show raw message receipt
+                console.log('[CLIENT] RAW MSG:', message._id);
                 // Deduplication
                 if (processedMessageIds.current.has(message._id)) return;
                 processedMessageIds.current.add(message._id);
@@ -130,7 +141,9 @@ const ChatDashboard = () => {
                 const isOwnMessage = (message.sender._id && user._id && message.sender._id.toString() === user._id.toString()) ||
                     (message.sender.username && user.username && message.sender.username === user.username);
 
+                // DEBUG: Toast for ALL messages temporarily
                 if (!isOwnMessage) {
+                    toast(`Msg: ${message.content?.substring(0, 10)}...`, { id: message._id }); // Simple debug toast
                     showMessageNotification(message, message.sender.username, !!message.group);
                     toast.success(`New message from ${message.sender.username}`);
                 }
