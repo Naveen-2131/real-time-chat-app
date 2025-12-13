@@ -91,31 +91,30 @@ const ChatDashboard = () => {
     const processedMessageIds = useRef(new Set());
 
     // Listen for incoming messages and user status
+    // Use refs to access latest state inside socket listeners without re-binding
+    const selectedChatRef = useRef(selectedChat);
+
+    // Sync ref with state
     useEffect(() => {
-        if (socket) {
+        selectedChatRef.current = selectedChat;
+    }, [selectedChat]);
+
+    // Socket Event Listeners
+    useEffect(() => {
+        if (socket && user) {
             const handleReconnection = () => {
-                console.log('[CLIENT] Socket reconnected, re-joining rooms...');
-                // Re-join user room
-                if (user) {
-                    socket.emit('join_with_data', { userId: user._id, username: user.username });
-                }
+                console.log('[CLIENT] Socket reconnected');
+                socket.emit('join_with_data', { userId: user._id, username: user.username });
 
-                // Re-join all conversation rooms
-                conversations.forEach(chat => {
-                    socket.emit('join_conversation', chat._id);
-                });
+                // Re-join all rooms
+                conversations.forEach(chat => socket.emit('join_conversation', chat._id));
+                groups.forEach(group => socket.emit('join_conversation', group._id));
 
-                // Re-join all group rooms
-                groups.forEach(group => {
-                    socket.emit('join_conversation', group._id);
-                });
-
-                // Re-join current chat if selected
-                if (selectedChat) {
-                    socket.emit('join_conversation', selectedChat._id);
-                    // CRITICAL: Fetch latest messages to fill gaps from disconnection time
+                // Re-join current chat and sync
+                if (selectedChatRef.current) {
+                    socket.emit('join_conversation', selectedChatRef.current._id);
                     console.log('[CLIENT] Syncing messages after reconnection...');
-                    fetchMessages(selectedChat._id, selectedChat.isGroup, page);
+                    fetchMessages(selectedChatRef.current._id, selectedChatRef.current.isGroup, 1);
                 }
             };
 
@@ -123,121 +122,92 @@ const ChatDashboard = () => {
             socket.on('reconnect', handleReconnection);
 
             socket.on('new_message', (message) => {
-                // DEDUPLICATION: Check if we already processed this message ID
-                if (processedMessageIds.current.has(message._id)) {
-                    console.log('[CLIENT] Duplicate message ignored:', message._id);
-                    return;
-                }
-
-                // Add to processed set
+                // Deduplication
+                if (processedMessageIds.current.has(message._id)) return;
                 processedMessageIds.current.add(message._id);
-                // Clear from set after 5 seconds to keep memory low
-                setTimeout(() => {
-                    processedMessageIds.current.delete(message._id);
-                }, 5000);
+                setTimeout(() => processedMessageIds.current.delete(message._id), 5000);
 
-                console.log('[CLIENT] Received new_message:', message._id, message.content?.substring(0, 20));
-
-                // Show notification for messages from others (not from any of current user's devices)
-                // Use robust check: compare IDs OR usernames
                 const isOwnMessage = (message.sender._id && user._id && message.sender._id.toString() === user._id.toString()) ||
                     (message.sender.username && user.username && message.sender.username === user.username);
 
                 if (!isOwnMessage) {
-                    const senderName = message.sender.username;
-                    const isGroup = !!message.group;
-
-                    // Show browser notification
-                    showMessageNotification(message, senderName, isGroup);
-
-                    // Show toast notification
-                    toast.success(`New message from ${senderName}`);
+                    showMessageNotification(message, message.sender.username, !!message.group);
+                    toast.success(`New message from ${message.sender.username}`);
                 }
 
                 const msgConversationId = message.conversation?._id || message.conversation;
                 const msgGroupId = message.group?._id || message.group;
+                const currentChat = selectedChatRef.current;
 
-                if (selectedChat && (selectedChat._id === msgConversationId || selectedChat._id === msgGroupId)) {
+                // Update active chat messages
+                if (currentChat && (currentChat._id === msgConversationId || currentChat._id === msgGroupId)) {
                     setMessages((prev) => {
-                        // Double check state for safety (though ref should catch it)
                         if (prev.some(m => m._id === message._id)) return prev;
                         return [...prev, message];
                     });
-                    // If it's the current chat, mark as read immediately
+
                     if (document.visibilityState === 'visible') {
                         socket.emit('mark_read', {
-                            conversationId: message.conversation?._id || message.conversation,
+                            conversationId: msgConversationId,
                             messageId: message._id
                         });
                     }
                 }
 
-                // OPTIMISTIC UPDATE: Update conversations/groups list locally
-                const updateList = (list, setList) => {
+                // Update lists (optimistic)
+                const updateList = (setList) => {
                     setList(prev => {
-                        const index = prev.findIndex(c => c._id === (msgConversationId || msgGroupId));
+                        const targetId = msgConversationId || msgGroupId;
+                        const index = prev.findIndex(c => c._id === targetId);
                         if (index !== -1) {
-                            const updatedChat = { ...prev[index] };
-                            updatedChat.lastMessage = message;
-                            updatedChat.updatedAt = new Date().toISOString();
+                            const updated = { ...prev[index] };
+                            updated.lastMessage = message;
+                            updated.updatedAt = new Date().toISOString();
 
-                            // Only increment unread count for messages from others AND if not current chat
-                            if (!isOwnMessage && (!selectedChat || (selectedChat._id !== updatedChat._id))) {
-                                const currentCount = (updatedChat.unreadCount && updatedChat.unreadCount[user._id]) || 0;
-                                updatedChat.unreadCount = { ...updatedChat.unreadCount, [user._id]: currentCount + 1 };
+                            // Increment unread count only if NOT current chat
+                            if (!isOwnMessage && (!currentChat || currentChat._id !== targetId)) {
+                                const count = (updated.unreadCount && updated.unreadCount[user._id]) || 0;
+                                updated.unreadCount = { ...updated.unreadCount, [user._id]: count + 1 };
                             }
 
                             const newList = [...prev];
                             newList.splice(index, 1);
-                            newList.unshift(updatedChat);
+                            newList.unshift(updated);
                             return newList;
                         }
-                        // If new chat/not found, fallback to fetch (or we could add it if we had full chat data)
-                        fetchConversations(); // Fallback for completely new chats
+                        fetchConversations();
                         return prev;
                     });
                 };
 
-                if (message.group) {
-                    updateList(groups, setGroups);
-                } else {
-                    updateList(conversations, setConversations);
-                }
-
+                if (message.group) updateList(setGroups);
+                else updateList(setConversations);
             });
 
             socket.on('typing', ({ room, user: typingUsername }) => {
-                if (selectedChat && (selectedChat._id === room) && typingUsername !== user.username) {
+                if (selectedChatRef.current && selectedChatRef.current._id === room && typingUsername !== user.username) {
                     setIsTyping(true);
                     setTypingUser(typingUsername);
                 }
             });
 
             socket.on('stop_typing', ({ room }) => {
-                if (selectedChat && (selectedChat._id === room)) {
+                if (selectedChatRef.current && selectedChatRef.current._id === room) {
                     setIsTyping(false);
                     setTypingUser('');
                 }
             });
 
-            // Listen for user status changes
             socket.on('user_status_change', ({ userId, status }) => {
                 setOnlineUsers((prev) => {
                     const newSet = new Set(prev);
-                    if (status === 'online') {
-                        newSet.add(userId);
-                    } else {
-                        newSet.delete(userId);
-                    }
+                    status === 'online' ? newSet.add(userId) : newSet.delete(userId);
                     return newSet;
                 });
             });
 
-            // Request current online users list
             socket.emit('get_online_users');
-            socket.on('online_users_list', (userIds) => {
-                setOnlineUsers(new Set(userIds));
-            });
+            socket.on('online_users_list', (userIds) => setOnlineUsers(new Set(userIds)));
 
             return () => {
                 socket.off('connect', handleReconnection);
@@ -249,7 +219,7 @@ const ChatDashboard = () => {
                 socket.off('online_users_list');
             };
         }
-    }, [socket, selectedChat, user, groups, conversations]); // Added dependencies for local updates
+    }, [socket, user]); // Stable dependencies only
 
     // Prevent default drag behavior globally to avoid navigation
     useEffect(() => {
