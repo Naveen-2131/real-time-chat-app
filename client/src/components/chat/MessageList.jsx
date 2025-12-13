@@ -67,13 +67,50 @@ const MessageList = ({
         setActiveMessageId(null);
     };
 
-    const handleSaveClick = (msg) => {
-        const url = getFileUrl(msg.fileUrl);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = msg.fileName || 'download';
-        link.click();
-        setActiveMessageId(null);
+    const handleSaveClick = async (msg) => {
+        try {
+            const url = getFileUrl(msg.fileUrl);
+
+            // For data URLs, download directly
+            if (url.startsWith('data:')) {
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = msg.fileName || 'download';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setActiveMessageId(null);
+                return;
+            }
+
+            // For regular URLs, fetch and create blob
+            const response = await fetch(url);
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = msg.fileName || 'download';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            // Clean up blob URL
+            window.URL.revokeObjectURL(blobUrl);
+            setActiveMessageId(null);
+        } catch (error) {
+            console.error('Download failed:', error);
+            // Fallback: try direct download
+            const url = getFileUrl(msg.fileUrl);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = msg.fileName || 'download';
+            link.target = '_blank';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            setActiveMessageId(null);
+        }
     };
 
     const getFileUrl = (url) => {
