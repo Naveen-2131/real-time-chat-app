@@ -513,7 +513,7 @@ const ChatDashboard = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300">
+        <div className="flex h-[100dvh] bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300">
             {/* Sidebar - Conditional for mobile */}
             {(!isMobileView || showChatList) && (
                 <Sidebar
