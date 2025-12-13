@@ -16,7 +16,7 @@ const ChatHeader = ({
     return (
         <>
             {/* Chat Header */}
-            <div className="p-4 bg-slate-800/80 backdrop-blur-md border-b border-slate-700/50 flex justify-between items-center shadow-sm z-10">
+            <div className="p-4 bg-slate-800/90 backdrop-blur-md border-b border-slate-700/50 flex justify-between items-center shadow-sm z-50 sticky top-0 w-full flex-shrink-0 h-16 sm:h-auto">
                 <div className="flex items-center space-x-4">
                     {/* Back button for mobile */}
                     {isMobileView && (
