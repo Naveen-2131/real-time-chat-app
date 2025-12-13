@@ -113,6 +113,9 @@ const ChatDashboard = () => {
                 // Re-join current chat if selected
                 if (selectedChat) {
                     socket.emit('join_conversation', selectedChat._id);
+                    // CRITICAL: Fetch latest messages to fill gaps from disconnection time
+                    console.log('[CLIENT] Syncing messages after reconnection...');
+                    fetchMessages(selectedChat._id, selectedChat.isGroup, page);
                 }
             };
 
