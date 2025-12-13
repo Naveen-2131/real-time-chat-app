@@ -149,6 +149,23 @@ const MessageList = ({
                 </div>
             );
         } else {
+            // Check if it's a PDF
+            const isPDF = msg.fileName?.toLowerCase().endsWith('.pdf') || msg.fileType === 'pdf';
+            
+            if (isPDF) {
+                return (
+                    <div
+                        onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'pdf')}
+                        className="flex items-center space-x-2 mt-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 cursor-pointer"
+                    >
+                        <FiFile className="w-5 h-5 text-red-500" />
+                        <span className="text-sm">{msg.fileName}</span>
+                        <span className="text-xs text-slate-400 ml-auto">Click to view</span>
+                    </div>
+                );
+            }
+            
+            // For other file types, show download link
             return (
                 <a
                     href={getFileUrl(msg.fileUrl)}
