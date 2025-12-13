@@ -29,7 +29,7 @@ const ChatInput = ({
     };
 
     return (
-        <div className="p-4 bg-slate-800/80 backdrop-blur-md border-t border-slate-700/50 z-10">
+        <div className="p-4 bg-slate-800/80 backdrop-blur-md border-t border-slate-700/50 z-10 flex-shrink-0">
             <form onSubmit={handleSendMessage} className="flex items-end space-x-3 max-w-4xl mx-auto">
                 <div className="flex-shrink-0 mb-1">
                     <FileUploadButton
