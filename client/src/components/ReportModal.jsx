@@ -19,10 +19,18 @@ const ReportModal = ({ isOpen, onClose, messageId, reportedUser }) => {
                 description
             });
             toast.success('Report submitted successfully');
-            onClose();
+
+            // Reset form state
+            setReason('');
+            setDescription('');
+            setLoading(false);
+
+            // Close modal after a short delay to show the success message
+            setTimeout(() => {
+                onClose();
+            }, 500);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to submit report');
-        } finally {
             setLoading(false);
         }
     };
