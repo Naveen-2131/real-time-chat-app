@@ -159,6 +159,17 @@ const ChatDashboard = () => {
                 const msgGroupId = message.group?._id || message.group;
                 const currentChat = selectedChatRef.current;
 
+                // DEBUG: Check ID matching
+                if (!isOwnMessage) {
+                    const match = currentChat && (currentChat._id === msgConversationId || currentChat._id === msgGroupId);
+                    if (!match) {
+                        toast.error(`ID Mismatch!\nChat: ${currentChat?._id?.substring(0, 4)}\nMsg: ${msgConversationId?.substring(0, 4)}`, { duration: 5000 });
+                        console.log('ID Mismatch:', currentChat?._id, msgConversationId);
+                    } else {
+                        toast.success('ID Match! Updating...', { duration: 1000 });
+                    }
+                }
+
                 // Update active chat messages
                 if (currentChat && (currentChat._id === msgConversationId || currentChat._id === msgGroupId)) {
                     setMessages((prev) => {
