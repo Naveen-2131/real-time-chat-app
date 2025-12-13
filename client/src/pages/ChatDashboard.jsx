@@ -130,6 +130,13 @@ const ChatDashboard = () => {
             socket.on('connect', handleReconnection);
             socket.on('reconnect', handleReconnection);
 
+            // CRITICAL FIX: If socket is ALREADY connected when this component mounts,
+            // we must run the join logic immediately, otherwise we miss the 'connect' event.
+            if (socket.connected) {
+                console.log('[CLIENT] Socket already connected on mount, forcing join...');
+                handleReconnection();
+            }
+
             socket.on('new_message', (message) => {
                 // DEBUG: Show raw message receipt
                 console.log('[CLIENT] RAW MSG:', message._id);
