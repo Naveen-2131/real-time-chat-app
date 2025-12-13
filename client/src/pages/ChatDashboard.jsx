@@ -90,6 +90,30 @@ const ChatDashboard = () => {
     // Listen for incoming messages and user status
     useEffect(() => {
         if (socket) {
+            const handleReconnection = () => {
+                console.log('[CLIENT] Socket reconnected, re-joining rooms...');
+                // Re-join user room
+                socket.emit('join_with_data', { userId: user._id, username: user.username });
+
+                // Re-join all conversation rooms
+                conversations.forEach(chat => {
+                    socket.emit('join_conversation', chat._id);
+                });
+
+                // Re-join all group rooms
+                groups.forEach(group => {
+                    socket.emit('join_conversation', group._id);
+                });
+
+                // Re-join current chat if selected
+                if (selectedChat) {
+                    socket.emit('join_conversation', selectedChat._id);
+                }
+            };
+
+            socket.on('connect', handleReconnection);
+            socket.on('reconnect', handleReconnection);
+
             socket.on('new_message', (message) => {
                 console.log('[CLIENT] Received new_message:', message._id, message.content?.substring(0, 20));
 
@@ -195,6 +219,8 @@ const ChatDashboard = () => {
             });
 
             return () => {
+                socket.off('connect', handleReconnection);
+                socket.off('reconnect', handleReconnection);
                 socket.off('new_message');
                 socket.off('typing');
                 socket.off('stop_typing');
