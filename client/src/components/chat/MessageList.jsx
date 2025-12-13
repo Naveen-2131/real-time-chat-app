@@ -128,12 +128,18 @@ const MessageList = ({
 
         if (msg.fileType === 'image') {
             return (
-                <div className="mt-2">
+                <div className="mt-2 text-center">
                     <img
                         src={getFileUrl(msg.fileUrl)}
                         alt={msg.fileName}
                         className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'image')}
+                        onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://via.placeholder.com/300x200?text=Image+Expired';
+                            e.target.className = "max-w-xs rounded-lg opacity-50";
+                            e.target.onclick = null; // Disable click for broken images
+                        }}
                     />
                 </div>
             );
@@ -151,7 +157,7 @@ const MessageList = ({
         } else {
             // Check if it's a PDF
             const isPDF = msg.fileName?.toLowerCase().endsWith('.pdf') || msg.fileType === 'pdf';
-            
+
             if (isPDF) {
                 return (
                     <div
@@ -164,7 +170,7 @@ const MessageList = ({
                     </div>
                 );
             }
-            
+
             // For other file types, show download link
             return (
                 <a
@@ -253,6 +259,10 @@ const MessageList = ({
                                                 }
                                                 alt="Avatar"
                                                 className="w-full h-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = `https://ui-avatars.com/api/?name=${msg.sender.username}&background=random`;
+                                                }}
                                             />
                                         ) : (
                                             <span className="text-[10px] font-bold text-secondary">{msg.sender.username[0].toUpperCase()}</span>
