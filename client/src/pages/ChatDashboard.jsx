@@ -87,13 +87,18 @@ const ChatDashboard = () => {
         }
     }, [user, socket]);
 
+    // Message deduplication
+    const processedMessageIds = useRef(new Set());
+
     // Listen for incoming messages and user status
     useEffect(() => {
         if (socket) {
             const handleReconnection = () => {
                 console.log('[CLIENT] Socket reconnected, re-joining rooms...');
                 // Re-join user room
-                socket.emit('join_with_data', { userId: user._id, username: user.username });
+                if (user) {
+                    socket.emit('join_with_data', { userId: user._id, username: user.username });
+                }
 
                 // Re-join all conversation rooms
                 conversations.forEach(chat => {
@@ -115,6 +120,19 @@ const ChatDashboard = () => {
             socket.on('reconnect', handleReconnection);
 
             socket.on('new_message', (message) => {
+                // DEDUPLICATION: Check if we already processed this message ID
+                if (processedMessageIds.current.has(message._id)) {
+                    console.log('[CLIENT] Duplicate message ignored:', message._id);
+                    return;
+                }
+
+                // Add to processed set
+                processedMessageIds.current.add(message._id);
+                // Clear from set after 5 seconds to keep memory low
+                setTimeout(() => {
+                    processedMessageIds.current.delete(message._id);
+                }, 5000);
+
                 console.log('[CLIENT] Received new_message:', message._id, message.content?.substring(0, 20));
 
                 // Show notification for messages from others (not from any of current user's devices)
@@ -138,7 +156,7 @@ const ChatDashboard = () => {
 
                 if (selectedChat && (selectedChat._id === msgConversationId || selectedChat._id === msgGroupId)) {
                     setMessages((prev) => {
-                        // Prevent duplicates
+                        // Double check state for safety (though ref should catch it)
                         if (prev.some(m => m._id === message._id)) return prev;
                         return [...prev, message];
                     });
@@ -513,7 +531,7 @@ const ChatDashboard = () => {
     };
 
     return (
-        <div className="flex h-[100dvh] bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300 flex">
             {/* Sidebar - Conditional for mobile */}
             {(!isMobileView || showChatList) && (
                 <Sidebar
