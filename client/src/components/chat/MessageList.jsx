@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
-import { FiDownload, FiFile, FiMoreVertical, FiFlag, FiLoader } from 'react-icons/fi';
+import { FiDownload, FiFile, FiMoreVertical, FiFlag, FiLoader, FiSave } from 'react-icons/fi';
 import ReportModal from '../ReportModal';
+import FileViewerModal from '../FileViewerModal';
 
 const MessageList = ({
     messages,
@@ -22,6 +23,8 @@ const MessageList = ({
     const [reportModalOpen, setReportModalOpen] = useState(false);
     const [messageToReport, setMessageToReport] = useState(null);
     const [activeMessageId, setActiveMessageId] = useState(null);
+    const [fileViewerOpen, setFileViewerOpen] = useState(false);
+    const [currentFile, setCurrentFile] = useState(null);
 
     const scrollRef = useRef(null);
     const prevScrollHeightRef = useRef(0);
@@ -58,12 +61,33 @@ const MessageList = ({
         setActiveMessageId(null);
     };
 
+    const handleFileClick = (url, name, type) => {
+        setCurrentFile({ url, name, type });
+        setFileViewerOpen(true);
+        setActiveMessageId(null);
+    };
+
+    const handleSaveClick = (msg) => {
+        const url = getFileUrl(msg.fileUrl);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = msg.fileName || 'download';
+        link.click();
+        setActiveMessageId(null);
+    };
+
+    const getFileUrl = (url) => {
+        // If it's a data URL (base64), return as-is
+        if (url.startsWith('data:')) return url;
+        // If it's already a full URL, return as-is
+        if (url.startsWith('http')) return url;
+        // Otherwise, construct the full URL using the API base URL
+        const apiUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+        return `${apiUrl}${url}`;
+    };
+
     const renderFilePreview = (msg) => {
         if (!msg.fileUrl) return null;
-
-        const getFileUrl = (url) => {
-            return url.startsWith('data:') ? url : `${import.meta.env.VITE_SOCKET_URL}${url}`;
-        };
 
         if (msg.fileType === 'image') {
             return (
@@ -71,8 +95,8 @@ const MessageList = ({
                     <img
                         src={getFileUrl(msg.fileUrl)}
                         alt={msg.fileName}
-                        className="max-w-xs rounded-lg cursor-pointer hover:opacity-90"
-                        onClick={() => window.open(getFileUrl(msg.fileUrl), '_blank')}
+                        className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'image')}
                     />
                 </div>
             );
@@ -81,9 +105,10 @@ const MessageList = ({
                 <div className="mt-2">
                     <video
                         src={getFileUrl(msg.fileUrl)}
-                        controls
-                        className="max-w-xs rounded-lg"
+                        className="max-w-xs rounded-lg cursor-pointer"
+                        onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'video')}
                     />
+                    <div className="text-xs text-slate-400 mt-1">Click to view in fullscreen</div>
                 </div>
             );
         } else {
@@ -215,6 +240,15 @@ const MessageList = ({
                                                 <FiFlag className="mr-2 w-4 h-4" />
                                                 Report
                                             </button>
+                                            {msg.fileUrl && (
+                                                <button
+                                                    onClick={() => handleSaveClick(msg)}
+                                                    className="w-full px-4 py-2 text-left text-sm text-slate-200 hover:bg-slate-700 flex items-center"
+                                                >
+                                                    <FiSave className="mr-2 w-4 h-4" />
+                                                    Save
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -244,6 +278,13 @@ const MessageList = ({
                 onClose={() => setReportModalOpen(false)}
                 messageId={messageToReport?._id}
                 reportedUser={messageToReport?.sender?.username}
+            />
+
+            {/* File Viewer Modal */}
+            <FileViewerModal
+                isOpen={fileViewerOpen}
+                onClose={() => setFileViewerOpen(false)}
+                file={currentFile}
             />
         </div>
     );
