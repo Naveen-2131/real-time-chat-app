@@ -68,9 +68,24 @@ export const showNotification = (title, options = {}) => {
  */
 export const playNotificationSound = (soundType = 'message') => {
     try {
-        const audio = new Audio(`/sounds/${soundType}.mp3`);
-        audio.volume = 0.5;
-        audio.play().catch(err => console.log('Sound play failed:', err));
+        // Use Web Audio API to create a simple beep sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Different frequencies for different notification types
+        oscillator.frequency.value = soundType === 'group' ? 800 : 600;
+        oscillator.type = 'sine';
+
+        // Volume and duration
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
     } catch (error) {
         console.log('Sound not available:', error);
     }
