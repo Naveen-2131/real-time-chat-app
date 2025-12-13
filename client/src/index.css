@@ -1,29 +1,40 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-html,
-body {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  overscroll-behavior: none;
-  position: fixed;
-  /* Lock body in place */
-  inset: 0;
+@theme {
+  --color-primary: #6366f1;
+  --color-secondary: #a855f7;
+  --color-accent: #ec4899;
+  --color-dark: #0f172a;
+  --color-light: #f8fafc;
+  --font-sans: "Inter", sans-serif;
 }
 
-#root {
-  height: 100%;
-  width: 100%;
-}
+/* Force class-based dark mode */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
 
+  html,
+  body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+    position: fixed;
+    /* Lock body in place */
+    inset: 0;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
+  }
+
   body {
     @apply bg-slate-900 text-slate-100 font-sans transition-colors duration-300;
-    background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
-    @apply from-slate-900 via-slate-800 to-slate-900;
+    /* Gradient background with fallback */
+    background-color: var(--color-dark);
+    background-image: linear-gradient(to bottom right, var(--color-dark), #1e293b, var(--color-dark));
     min-height: 100vh;
   }
 }
