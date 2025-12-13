@@ -103,14 +103,8 @@ const ChatDashboard = () => {
     useEffect(() => {
         if (socket && user) {
             const handleReconnection = () => {
-                console.log('[CLIENT] Socket reconnected');
-                // DEBUG: Show connection status
-                toast.success(`Connected! ID: ${socket.id?.substring(0, 4)}`, { id: 'conn-success', duration: 2000 });
-
                 if (user && user._id) {
                     socket.emit('join_with_data', { userId: user._id, username: user.username });
-                    // DEBUG: Show room join
-                    toast('Joining Room: ' + user._id.substring(0, 4), { icon: '🔌' });
                 } else {
                     toast.error('NO USER ID FOUND!');
                 }
@@ -122,7 +116,6 @@ const ChatDashboard = () => {
                 // Re-join current chat and sync
                 if (selectedChatRef.current) {
                     socket.emit('join_conversation', selectedChatRef.current._id);
-                    console.log('[CLIENT] Syncing messages after reconnection...');
                     fetchMessages(selectedChatRef.current._id, selectedChatRef.current.isGroup, 1);
                 }
             };
@@ -133,13 +126,10 @@ const ChatDashboard = () => {
             // CRITICAL FIX: If socket is ALREADY connected when this component mounts,
             // we must run the join logic immediately, otherwise we miss the 'connect' event.
             if (socket.connected) {
-                console.log('[CLIENT] Socket already connected on mount, forcing join...');
                 handleReconnection();
             }
 
             socket.on('new_message', (message) => {
-                // DEBUG: Show raw message receipt
-                console.log('[CLIENT] RAW MSG:', message._id);
                 // Deduplication
                 if (processedMessageIds.current.has(message._id)) return;
                 processedMessageIds.current.add(message._id);
@@ -148,10 +138,8 @@ const ChatDashboard = () => {
                 const isOwnMessage = (message.sender._id && user._id && message.sender._id.toString() === user._id.toString()) ||
                     (message.sender.username && user.username && message.sender.username === user.username);
 
-                // DEBUG: Toast for ALL messages temporarily
                 if (!isOwnMessage) {
                     showMessageNotification(message, message.sender.username, !!message.group);
-                    toast.success(`New message from ${message.sender.username}`);
                 }
 
                 const msgConversationId = message.conversation?._id || message.conversation || message.conversationId;
@@ -164,16 +152,6 @@ const ChatDashboard = () => {
                 const groupIdStr = msgGroupId ? String(msgGroupId) : null;
 
                 const isMatch = currentIdStr && (currentIdStr === msgIdStr || currentIdStr === groupIdStr);
-
-                // DEBUG: Detailed log for matching logic
-                console.log('[CLIENT] Message Match Check:', {
-                    msgId: message._id,
-                    msgConvId: msgIdStr,
-                    msgGroupId: groupIdStr,
-                    currentChatId: currentIdStr,
-                    isMatch,
-                    rawMessage: message
-                });
 
                 // Update active chat messages
                 if (isMatch) {
