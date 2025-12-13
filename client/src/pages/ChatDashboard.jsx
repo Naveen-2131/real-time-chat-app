@@ -150,29 +150,25 @@ const ChatDashboard = () => {
 
                 // DEBUG: Toast for ALL messages temporarily
                 if (!isOwnMessage) {
-                    toast(`Msg: ${message.content?.substring(0, 10)}...`, { id: message._id }); // Simple debug toast
                     showMessageNotification(message, message.sender.username, !!message.group);
                     toast.success(`New message from ${message.sender.username}`);
                 }
 
                 const msgConversationId = message.conversation?._id || message.conversation;
                 const msgGroupId = message.group?._id || message.group;
-                const currentChat = selectedChatRef.current;
+                const currentChat = selectedChatRef.current; // access via ref to be safe
 
-                // DEBUG: Check ID matching
-                if (!isOwnMessage) {
-                    const match = currentChat && (currentChat._id === msgConversationId || currentChat._id === msgGroupId);
-                    if (!match) {
-                        toast.error(`ID Mismatch!\nChat: ${currentChat?._id?.substring(0, 4)}\nMsg: ${msgConversationId?.substring(0, 4)}`, { duration: 5000 });
-                        console.log('ID Mismatch:', currentChat?._id, msgConversationId);
-                    } else {
-                        toast.success('ID Match! Updating...', { duration: 1000 });
-                    }
-                }
+                // Normalize IDs for comparison
+                const currentIdStr = currentChat?._id ? String(currentChat._id) : null;
+                const msgIdStr = msgConversationId ? String(msgConversationId) : null;
+                const groupIdStr = msgGroupId ? String(msgGroupId) : null;
+
+                const isMatch = currentIdStr && (currentIdStr === msgIdStr || currentIdStr === groupIdStr);
 
                 // Update active chat messages
-                if (currentChat && (currentChat._id === msgConversationId || currentChat._id === msgGroupId)) {
+                if (isMatch) {
                     setMessages((prev) => {
+                        // Double check state for safety
                         if (prev.some(m => m._id === message._id)) return prev;
                         return [...prev, message];
                     });
@@ -185,34 +181,46 @@ const ChatDashboard = () => {
                     }
                 }
 
-                // Update lists (optimistic)
-                const updateList = (setList) => {
+                // OPTIMISTIC UPDATE: Update conversations/groups list locally
+                const updateList = (list, setList) => {
                     setList(prev => {
                         const targetId = msgConversationId || msgGroupId;
-                        const index = prev.findIndex(c => c._id === targetId);
-                        if (index !== -1) {
-                            const updated = { ...prev[index] };
-                            updated.lastMessage = message;
-                            updated.updatedAt = new Date().toISOString();
+                        // Use string comparison here too if needed, but usually findIndex handles it if types match.
+                        // Better to be safe:
+                        const index = prev.findIndex(c => String(c._id) === String(targetId));
 
-                            // Increment unread count only if NOT current chat
-                            if (!isOwnMessage && (!currentChat || currentChat._id !== targetId)) {
-                                const count = (updated.unreadCount && updated.unreadCount[user._id]) || 0;
-                                updated.unreadCount = { ...updated.unreadCount, [user._id]: count + 1 };
+                        if (index !== -1) {
+                            const updatedChat = { ...prev[index] };
+                            updatedChat.lastMessage = message;
+                            updatedChat.updatedAt = new Date().toISOString();
+
+                            // Only increment unread count for messages from others AND if not current chat
+                            // Note: currentChat might be null if we are in dashboard list view
+                            if (!isOwnMessage) {
+                                // If we are NOT in this chat, increment
+                                if (!currentIdStr || currentIdStr !== String(targetId)) {
+                                    const currentCount = (updatedChat.unreadCount && updatedChat.unreadCount[user._id]) || 0;
+                                    updatedChat.unreadCount = { ...updatedChat.unreadCount, [user._id]: currentCount + 1 };
+                                }
                             }
 
                             const newList = [...prev];
                             newList.splice(index, 1);
-                            newList.unshift(updated);
+                            newList.unshift(updatedChat);
                             return newList;
                         }
+                        // If new chat/not found, fallback to fetch
                         fetchConversations();
                         return prev;
                     });
                 };
 
-                if (message.group) updateList(setGroups);
-                else updateList(setConversations);
+                if (message.group) {
+                    updateList(groups, setGroups);
+                } else {
+                    updateList(conversations, setConversations);
+                }
+
             });
 
             socket.on('typing', ({ room, user: typingUsername }) => {
