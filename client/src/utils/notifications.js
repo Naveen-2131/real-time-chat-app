@@ -62,14 +62,35 @@ export const showNotification = (title, options = {}) => {
     return notification;
 };
 
+// Global AudioContext instance (created once after user interaction)
+let audioContext = null;
+
+/**
+ * Initialize AudioContext after user interaction
+ */
+const initAudioContext = () => {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+};
+
 /**
  * Play notification sound
  * @param {string} soundType - Type of sound: 'message' or 'group'
  */
 export const playNotificationSound = (soundType = 'message') => {
     try {
-        // Use Web Audio API to create a simple beep sound
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // Initialize AudioContext if needed
+        initAudioContext();
+        
+        if (!audioContext || audioContext.state === 'suspended') {
+            // AudioContext not ready yet, skip sound
+            return;
+        }
+        
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -87,7 +108,7 @@ export const playNotificationSound = (soundType = 'message') => {
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.2);
     } catch (error) {
-        console.log('Sound not available:', error);
+        // Silently fail - audio is not critical
     }
 };
 
