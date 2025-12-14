@@ -11,9 +11,11 @@ RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 # Copy source code
 COPY . .
 
-# IMPORTANT: Inject API URL during build time
+# IMPORTANT: Inject API & Socket URLs during build time
 ARG VITE_API_URL
+ARG VITE_SOCKET_URL
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_SOCKET_URL=$VITE_SOCKET_URL
 
 # Build for production
 RUN npm run build
