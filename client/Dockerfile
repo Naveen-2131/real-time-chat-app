@@ -1,8 +1,8 @@
-# Build stage
-FROM node:18-alpine AS builder
+# Build stage (Updated to Node 20)
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.jso[n] ./
-# Robust install: uses ci if lockfile exists, otherwise install
+# Robust install
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
 RUN npm run build
