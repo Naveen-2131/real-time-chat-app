@@ -1,29 +1,31 @@
-# ---------------- BUILD STAGE ----------------
-FROM node:18-alpine AS builder
+# Stage 1: Build
+FROM node:18-alpine as build
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
 RUN npm ci
 
+# Copy source code
 COPY . .
+
+# Build the application
 RUN npm run build
 
-# ---------------- RUNNER STAGE ----------------
+# Stage 2: Serve
 FROM nginx:alpine
 
-RUN echo 'server { \
-    listen 80; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    gzip on; \
-    gzip_types text/plain text/css application/json application/javascript; \
-    location / { try_files $uri $uri/ /index.html; } \
-    location /health { return 200 "healthy\n"; } \
-}' > /etc/nginx/conf.d/default.conf
+# Copy built assets from builder stage
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# ⚠️ Change if output is not dist
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy nginx config if needed (optional, using default for now)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Expose port
 EXPOSE 80
+
+# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
