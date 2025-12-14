@@ -1,8 +1,10 @@
-# Build stage
+# Build stage (FOR CLIENT)
 FROM node:18-alpine AS builder
 WORKDIR /app
+
 COPY package.json package-lock.jso[n] ./
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
 COPY . .
 RUN npm run build
 
