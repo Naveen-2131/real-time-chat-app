@@ -1,31 +1,36 @@
-# Stage 1: Build
-FROM node:18-alpine as build
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
+# Multi-stage build for React frontend
+FROM node:18-alpine AS base
 
 # Install dependencies
-RUN npm ci
+FROM base AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
 
-# Copy source code
+# Build application
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Build the application
+# Build for production
 RUN npm run build
 
-# Stage 2: Serve
-FROM nginx:alpine
+# Production image with nginx
+FROM nginx:alpine AS runner
 
-# Copy built assets from builder stage
-COPY --from=build /app/dist /usr/share/nginx/html
+# Copy custom nginx config
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy nginx config if needed (optional, using default for now)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy built files
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80
 
-# Start Nginx
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+    CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
