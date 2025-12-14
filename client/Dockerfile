@@ -1,31 +1,25 @@
-# Stage 1: Build
-FROM node:18-alpine as build
-
+# Build stage
+FROM node:18-alpine AS builder
 WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+COPY package.json package-lock.jso[n] ./
+# Robust install: uses ci if lockfile exists, otherwise install
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 COPY . .
-
-# Build the application
 RUN npm run build
 
-# Stage 2: Serve
-FROM nginx:alpine
+# Runner stage
+FROM nginx:alpine AS runner
+# Create nginx config inline
+RUN echo 'server { \
+    listen 80; \
+    server_name _; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    gzip on; gzip_types text/plain text/css application/json application/javascript; \
+    location / { try_files $uri $uri/ /index.html; } \
+    location /health { return 200 "healthy\n"; } \
+}' > /etc/nginx/conf.d/default.conf
 
-# Copy built assets from builder stage
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copy nginx config if needed (optional, using default for now)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-
-# Expose port
+COPY --from=builder /app/dist /usr/share/nginx/html
 EXPOSE 80
-
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
