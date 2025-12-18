@@ -84,11 +84,12 @@ export const chatService = {
     accessConversation: (userId) => api.post('/conversations', { userId }),
     fetchMessages: (conversationId, page = 1, limit = 50) => api.get(`/messages/conversation/${conversationId}?page=${page}&limit=${limit}`),
     fetchGroupMessages: (groupId, page = 1, limit = 50) => api.get(`/messages/group/${groupId}?page=${page}&limit=${limit}`),
-    sendMessage: (data) => {
+    sendMessage: (data, onUploadProgress) => {
+        const config = onUploadProgress ? { onUploadProgress } : {};
         if (data instanceof FormData) {
-            return uploadApi.post('/messages', data);
+            return uploadApi.post('/messages', data, config);
         }
-        return api.post('/messages', data);
+        return api.post('/messages', data, config);
     },
     markAsRead: (conversationId) => api.put(`/messages/mark-read/conversation/${conversationId}`),
     markGroupAsRead: (groupId) => api.put(`/messages/mark-read/group/${groupId}`),
