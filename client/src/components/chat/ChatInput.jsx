@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { FiX, FiImage, FiVideo, FiFile } from 'react-icons/fi';
-import FileUploadButton from '../FileUploadButton';
+import FileUploadButton from '../FileUploadButton.jsx';
 
 const ChatInput = ({
     handleSendMessage,
