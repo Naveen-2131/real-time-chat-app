@@ -50,7 +50,7 @@ const ChatInput = ({
     };
 
     return (
-        <div className="p-4 bg-slate-800/80 backdrop-blur-md border-t border-slate-700/50 z-10 flex-shrink-0">
+        <div className="p-2 sm:p-4 bg-slate-800/80 backdrop-blur-md border-t border-slate-700/50 z-10 flex-shrink-0">
             {selectedFile && (
                 <div className="max-w-4xl mx-auto mb-3 animate-fade-in-up">
                     <div className="flex items-center space-x-3 p-2 bg-slate-700/50 rounded-xl border border-slate-600/50">
