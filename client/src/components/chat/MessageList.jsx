@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { FiDownload, FiFile, FiMoreVertical, FiFlag, FiLoader, FiSave } from 'react-icons/fi';
+import { FiDownload, FiFile, FiMoreVertical, FiFlag, FiLoader, FiSave, FiSearch } from 'react-icons/fi';
 import ReportModal from '../ReportModal';
 import FileViewerModal from '../FileViewerModal';
 
@@ -432,3 +432,4 @@ const MessageList = ({
 };
 
 export default MessageList;
+
