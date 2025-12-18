@@ -19,7 +19,8 @@ const Sidebar = ({
     groups,
     isMobileView,
     navigate,
-    onlineUsers // New prop
+    onlineUsers,
+    isLoading // New prop
 }) => {
     return (
         <div className={`${isMobileView ? 'w-full' : 'w-1/4 md:w-1/3 lg:w-1/4'} bg-slate-800/80 backdrop-blur-md border-r border-slate-700/50 flex flex-col shadow-xl z-10 ${isMobileView ? 'animate-slide-in-left' : ''}`}>
@@ -122,7 +123,20 @@ const Sidebar = ({
 
             {/* Search Results or Conversations/Groups List */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-                {searchResults.length > 0 ? (
+                {isLoading ? (
+                    // Skeleton Loaders
+                    <div className="space-y-4 p-4">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="flex items-center space-x-3 animate-pulse">
+                                <div className="w-12 h-12 bg-slate-700 rounded-full"></div>
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-4 bg-slate-700 rounded w-1/3"></div>
+                                    <div className="h-3 bg-slate-700 rounded w-2/3"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : searchResults.length > 0 ? (
                     <>
                         <h3 className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Search Results</h3>
                         {searchResults.map((result) => (
