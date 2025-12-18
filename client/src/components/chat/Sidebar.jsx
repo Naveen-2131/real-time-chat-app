@@ -32,7 +32,7 @@ const Sidebar = ({
                                 <div className="w-full h-full rounded-full bg-slate-800 overflow-hidden">
                                     {user?.profilePicture ? (
                                         <img
-                                            src={user.profilePicture.startsWith('data:') ? user.profilePicture : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`}
+                                            src={user.profilePicture.startsWith('data:') || user.profilePicture.startsWith('http') ? user.profilePicture : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`}
                                             alt="Profile"
                                             className="w-full h-full object-cover"
                                         />
@@ -135,7 +135,7 @@ const Sidebar = ({
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-secondary to-accent p-[2px]">
                                         <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                             {result.profilePicture ? (
-                                                <img src={result.profilePicture.startsWith('data:') ? result.profilePicture : `${import.meta.env.VITE_SOCKET_URL}${result.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
+                                                <img src={result.profilePicture.startsWith('data:') || result.profilePicture.startsWith('http') ? result.profilePicture : `${import.meta.env.VITE_SOCKET_URL}${result.profilePicture}`} alt="Profile" className="w-full h-full object-cover" />
                                             ) : (
                                                 <span className="text-secondary font-bold">{result.username[0].toUpperCase()}</span>
                                             )}
@@ -178,10 +178,10 @@ const Sidebar = ({
                                                 <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                                     {chat.participants.find(p => p._id !== user._id)?.profilePicture ? (
                                                         <img
-                                                            src={chat.participants.find(p => p._id !== user._id).profilePicture.startsWith('data:')
-                                                                ? chat.participants.find(p => p._id !== user._id).profilePicture
-                                                                : `${import.meta.env.VITE_SOCKET_URL}${chat.participants.find(p => p._id !== user._id).profilePicture}`
-                                                            }
+                                                            src={(() => {
+                                                                const pic = chat.participants.find(p => p._id !== user._id).profilePicture;
+                                                                return pic.startsWith('data:') || pic.startsWith('http') ? pic : `${import.meta.env.VITE_SOCKET_URL}${pic}`;
+                                                            })()}
                                                             alt="Profile"
                                                             className="w-full h-full object-cover"
                                                         />
