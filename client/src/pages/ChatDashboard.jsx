@@ -40,6 +40,10 @@ const ChatDashboard = () => {
     const [onlineUsers, setOnlineUsers] = useState(new Set());
     const [messageSearchQuery, setMessageSearchQuery] = useState('');
     const [showMsgSearch, setShowMsgSearch] = useState(false);
+    const [messageFilters, setMessageFilters] = useState({
+        type: 'all', // all, image, video, file
+        date: 'all' // all, today, week, month
+    });
     const [lastSync, setLastSync] = useState(Date.now()); // Force re-render for room joins if needed
 
     // Pagination State
@@ -262,33 +266,30 @@ const ChatDashboard = () => {
                 const updateList = (list, setList) => {
                     setList(prev => {
                         const targetId = msgConversationId || msgGroupId;
-                        // Use string comparison here too if needed, but usually findIndex handles it if types match.
-                        // Better to be safe:
                         const index = prev.findIndex(c => String(c._id) === String(targetId));
 
                         if (index !== -1) {
                             const updatedChat = { ...prev[index] };
                             updatedChat.lastMessage = message;
-                            updatedChat.updatedAt = new Date().toISOString();
+                            updatedChat.updatedAt = message.createdAt || new Date().toISOString();
 
-                            // Only increment unread count for messages from others AND if not current chat
-                            // Note: currentChat might be null if we are in dashboard list view
+                            // Increment unread count if it's NOT the current open chat AND not our own message
                             if (!isOwnMessage) {
-                                // If we are NOT in this chat, increment
                                 if (!currentIdStr || currentIdStr !== String(targetId)) {
                                     const currentCount = (updatedChat.unreadCount && updatedChat.unreadCount[user._id]) || 0;
                                     updatedChat.unreadCount = { ...updatedChat.unreadCount, [user._id]: currentCount + 1 };
                                 }
                             }
 
-                            const newList = [...prev];
-                            newList.splice(index, 1);
-                            newList.unshift(updatedChat);
-                            return newList;
+                            // Create new list, remove old item, and put updated item at the TOP
+                            const newList = prev.filter(c => String(c._id) !== String(targetId));
+                            return [updatedChat, ...newList];
+                        } else {
+                            // If it's a completely new conversation/group that we don't have in state yet
+                            fetchConversations();
+                            fetchGroups();
+                            return prev;
                         }
-                        // If new chat/not found, fallback to fetch
-                        fetchConversations();
-                        return prev;
                     });
                 };
 
@@ -671,6 +672,8 @@ const ChatDashboard = () => {
                             messageSearchQuery={messageSearchQuery}
                             setMessageSearchQuery={setMessageSearchQuery}
                             onlineUsers={onlineUsers}
+                            messageFilters={messageFilters}
+                            setMessageFilters={setMessageFilters}
                         />
 
                         <MessageList
@@ -689,6 +692,7 @@ const ChatDashboard = () => {
                             loadMoreMessages={loadMoreMessages}
                             hasMore={hasMore}
                             loadingMessages={loadingMessages}
+                            messageFilters={messageFilters}
                         />
 
                         <ChatInput
