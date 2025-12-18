@@ -38,10 +38,10 @@ const ChatHeader = ({
                             ) : (
                                 selectedChat.participants.find(p => p._id !== user._id)?.profilePicture ? (
                                     <img
-                                        src={selectedChat.participants.find(p => p._id !== user._id).profilePicture.startsWith('data:')
-                                            ? selectedChat.participants.find(p => p._id !== user._id).profilePicture
-                                            : `${import.meta.env.VITE_SOCKET_URL}${selectedChat.participants.find(p => p._id !== user._id).profilePicture}`
-                                        }
+                                        src={(() => {
+                                            const pic = selectedChat.participants.find(p => p._id !== user._id).profilePicture;
+                                            return pic.startsWith('data:') || pic.startsWith('http') ? pic : `${import.meta.env.VITE_SOCKET_URL}${pic}`;
+                                        })()}
                                         alt="Profile"
                                         className="w-full h-full object-cover"
                                     />
