@@ -18,7 +18,8 @@ const MessageList = ({
     messageSearchQuery,
     loadMoreMessages,
     hasMore,
-    loadingMessages
+    loadingMessages,
+    messageFilters
 }) => {
     const [reportModalOpen, setReportModalOpen] = useState(false);
     const [messageToReport, setMessageToReport] = useState(null);
@@ -191,6 +192,39 @@ const MessageList = ({
         }
     };
 
+    const filteredMessages = messages.filter(msg => {
+        // Keyword filter
+        const matchesKeyword = !messageSearchQuery ||
+            msg.content?.toLowerCase().includes(messageSearchQuery.toLowerCase()) ||
+            msg.fileName?.toLowerCase().includes(messageSearchQuery.toLowerCase());
+
+        // Type filter
+        let matchesType = true;
+        if (messageFilters.type !== 'all') {
+            if (messageFilters.type === 'file') {
+                matchesType = msg.fileUrl && !['image', 'video'].includes(msg.fileType);
+            } else {
+                matchesType = msg.fileType === messageFilters.type;
+            }
+        }
+
+        // Date filter
+        let matchesDate = true;
+        if (messageFilters.date !== 'all') {
+            const msgDate = new Date(msg.createdAt);
+            const now = new Date();
+            if (messageFilters.date === 'today') {
+                matchesDate = msgDate.toDateString() === now.toDateString();
+            } else if (messageFilters.date === 'week') {
+                const weekAgo = new Date();
+                weekAgo.setDate(now.getDate() - 7);
+                matchesDate = msgDate >= weekAgo;
+            }
+        }
+
+        return matchesKeyword && matchesType && matchesDate;
+    });
+
     return (
         <div
             ref={scrollRef}
@@ -220,11 +254,14 @@ const MessageList = ({
                 </div>
             )}
 
-            {messages
-                .filter(msg => {
-                    if (!messageSearchQuery) return true;
-                    return msg.content?.toLowerCase().includes(messageSearchQuery.toLowerCase());
-                })
+            {filteredMessages.length === 0 && (messageSearchQuery || messageFilters.type !== 'all' || messageFilters.date !== 'all') && (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 py-20">
+                    <FiSearch className="w-12 h-12 mb-4 opacity-20" />
+                    <p>No messages match your search criteria.</p>
+                </div>
+            )}
+
+            {filteredMessages
                 .map((msg, index) => {
                     const senderId = msg.sender._id || msg.sender;
                     // Robust check: Compare as strings OR compare usernames (fallback)
