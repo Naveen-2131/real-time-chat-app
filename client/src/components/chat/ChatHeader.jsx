@@ -11,7 +11,9 @@ const ChatHeader = ({
     setShowMsgSearch,
     messageSearchQuery,
     setMessageSearchQuery,
-    onlineUsers
+    onlineUsers,
+    messageFilters,
+    setMessageFilters
 }) => {
     return (
         <>
@@ -92,8 +94,8 @@ const ChatHeader = ({
 
             {/* Message Search Bar */}
             {showMsgSearch && (
-                <div className="px-6 py-2 bg-slate-800 border-b border-slate-700 animate-fade-in-down">
-                    <div className="relative">
+                <div className="px-6 py-3 bg-slate-800 border-b border-slate-700 animate-fade-in-down">
+                    <div className="relative mb-3">
                         <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
@@ -111,6 +113,36 @@ const ChatHeader = ({
                                 <FiX className="w-4 h-4" />
                             </button>
                         )}
+                    </div>
+
+                    {/* Filter Pills */}
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 mr-2">Filters:</span>
+                        {['all', 'image', 'video', 'file'].map((type) => (
+                            <button
+                                key={type}
+                                onClick={() => setMessageFilters(prev => ({ ...prev, type }))}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${messageFilters.type === type
+                                    ? 'bg-primary text-white shadow-lg'
+                                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                    }`}
+                            >
+                                {type.charAt(0).toUpperCase() + type.slice(1)}s
+                            </button>
+                        ))}
+                        <div className="w-[1px] h-4 bg-slate-600 mx-1"></div>
+                        {['all', 'today', 'week'].map((date) => (
+                            <button
+                                key={date}
+                                onClick={() => setMessageFilters(prev => ({ ...prev, date }))}
+                                className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${messageFilters.date === date
+                                    ? 'bg-secondary text-white shadow-lg'
+                                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                                    }`}
+                            >
+                                {date === 'all' ? 'Any Time' : date.charAt(0).toUpperCase() + date.slice(1)}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
