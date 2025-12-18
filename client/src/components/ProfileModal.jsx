@@ -91,7 +91,7 @@ const ProfileModal = ({ isOpen, onClose }) => {
                                     <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : user?.profilePicture ? (
                                     <img
-                                        src={user.profilePicture.startsWith('data:')
+                                        src={user.profilePicture.startsWith('data:') || user.profilePicture.startsWith('http')
                                             ? user.profilePicture
                                             : `${import.meta.env.VITE_SOCKET_URL}${user.profilePicture}`
                                         }
