@@ -682,7 +682,6 @@ const ChatDashboard = () => {
 
     const handleGroupCreated = (group) => {
         fetchGroups();
-        toast.success('Group created successfully!');
     };
 
     const handleTestNotification = async () => {
