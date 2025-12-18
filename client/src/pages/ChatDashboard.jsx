@@ -45,6 +45,8 @@ const ChatDashboard = () => {
         date: 'all' // all, today, week, month
     });
     const [lastSync, setLastSync] = useState(Date.now()); // Force re-render for room joins if needed
+    const [isLoadingData, setIsLoadingData] = useState(true); // Initial load state
+    const [uploadProgress, setUploadProgress] = useState({}); // Track progress by temp ID
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -90,13 +92,35 @@ const ChatDashboard = () => {
         scrollToBottom();
     }, [messages]);
 
-    // Fetch conversations and groups on load and when socket connects
+    // Fetch all initial data in parallel
     useEffect(() => {
         if (user) {
-            fetchConversations();
-            fetchGroups();
+            fetchInitialData();
         }
     }, [user, socket]);
+
+    const fetchInitialData = async () => {
+        setIsLoadingData(true);
+        try {
+            const [convRes, groupRes] = await Promise.all([
+                chatService.fetchConversations(),
+                groupService.fetchGroups()
+            ]);
+
+            setConversations(convRes.data);
+            setGroups(groupRes.data);
+
+            // Join all rooms in bulk via socket
+            if (socket) {
+                convRes.data.forEach(chat => socket.emit('join_conversation', chat._id));
+                groupRes.data.forEach(group => socket.emit('join_conversation', group._id));
+            }
+        } catch (error) {
+            console.error('Failed to fetch initial data', error);
+        } finally {
+            setIsLoadingData(false);
+        }
+    };
 
     // Message deduplication
     const processedMessageIds = useRef(new Set());
@@ -354,11 +378,8 @@ const ChatDashboard = () => {
         try {
             const { data } = await chatService.fetchConversations();
             setConversations(data);
-            // Join all conversation rooms to receive updates
             if (socket && data.length > 0) {
-                data.forEach(chat => {
-                    socket.emit('join_conversation', chat._id);
-                });
+                data.forEach(chat => socket.emit('join_conversation', chat._id));
             }
         } catch (error) {
             console.error('Failed to fetch conversations', error);
@@ -369,11 +390,8 @@ const ChatDashboard = () => {
         try {
             const { data } = await groupService.fetchGroups();
             setGroups(data);
-            // Join all group rooms
             if (socket && data.length > 0) {
-                data.forEach(group => {
-                    socket.emit('join_conversation', group._id);
-                });
+                data.forEach(group => socket.emit('join_conversation', group._id));
             }
         } catch (error) {
             console.error('Failed to fetch groups', error);
@@ -451,10 +469,41 @@ const ChatDashboard = () => {
         // Allow sending if there's either a message OR a file
         if (!newMessage.trim() && !selectedFile) return;
 
+        const tempId = `temp-${Date.now()}`;
+        let pendingMessage = null;
+
         try {
             let messageData;
 
             if (selectedFile) {
+                // Determine file type category
+                let fType = 'file';
+                if (selectedFile.type.startsWith('image/')) fType = 'image';
+                else if (selectedFile.type.startsWith('video/')) fType = 'video';
+                else if (selectedFile.type === 'application/pdf') fType = 'pdf';
+
+                // Create pending message for optimism
+                pendingMessage = {
+                    _id: tempId,
+                    content: newMessage,
+                    sender: {
+                        _id: user._id,
+                        username: user.username,
+                        profilePicture: user.profilePicture
+                    },
+                    fileUrl: URL.createObjectURL(selectedFile), // Local blob for preview
+                    fileName: selectedFile.name,
+                    fileType: fType,
+                    status: 'uploading',
+                    isGroup: selectedChat.isGroup,
+                    conversation: !selectedChat.isGroup ? selectedChat._id : undefined,
+                    group: selectedChat.isGroup ? selectedChat._id : undefined,
+                    createdAt: new Date().toISOString()
+                };
+
+                setMessages(prev => [...prev, pendingMessage]);
+                setUploadProgress(prev => ({ ...prev, [tempId]: 0 }));
+
                 // Send file
                 const formData = new FormData();
                 formData.append('file', selectedFile);
@@ -465,8 +514,14 @@ const ChatDashboard = () => {
                     formData.append('conversationId', selectedChat._id);
                 }
 
-                const { data } = await chatService.sendMessage(formData);
+                const { data } = await chatService.sendMessage(formData, (progressEvent) => {
+                    const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+                    setUploadProgress(prev => ({ ...prev, [tempId]: percentCompleted }));
+                });
                 messageData = data;
+
+                // Revoke the local blob URL
+                URL.revokeObjectURL(pendingMessage.fileUrl);
             } else {
                 // Send text message
                 const { data } = await chatService.sendMessage({
@@ -478,12 +533,21 @@ const ChatDashboard = () => {
             }
 
             setNewMessage('');
-            // Use functional update to ensure we're working with the latest state
-            setMessages(prev => [...prev, messageData]);
+
+            if (pendingMessage) {
+                // Replace pending with actual
+                setMessages(prev => prev.map(m => m._id === tempId ? messageData : m));
+                setUploadProgress(prev => {
+                    const newProgress = { ...prev };
+                    delete newProgress[tempId];
+                    return newProgress;
+                });
+            } else {
+                setMessages(prev => [...prev, messageData]);
+            }
+
             socket.emit('send_message', messageData);
             socket.emit('stop_typing', selectedChat._id);
-
-            // Clear selected file in parent state
             setSelectedFile(null);
 
             // OPTIMISTIC UPDATE: Update local list immediately
@@ -511,6 +575,14 @@ const ChatDashboard = () => {
 
         } catch (error) {
             console.error('Failed to send message', error);
+            if (pendingMessage) {
+                setMessages(prev => prev.filter(m => m._id !== tempId));
+                setUploadProgress(prev => {
+                    const newProgress = { ...prev };
+                    delete newProgress[tempId];
+                    return newProgress;
+                });
+            }
             toast.error(error.response?.data?.message || 'Failed to send message');
         }
     };
@@ -647,6 +719,7 @@ const ChatDashboard = () => {
                     groups={groups}
                     isMobileView={isMobileView}
                     onlineUsers={onlineUsers} // PASS onlineUsers to Sidebar
+                    isLoading={isLoadingData}
                 />
             )}
 
@@ -686,6 +759,7 @@ const ChatDashboard = () => {
                             hasMore={hasMore}
                             loadingMessages={loadingMessages}
                             messageFilters={messageFilters}
+                            uploadProgress={uploadProgress} // PASS uploadProgress to MessageList
                         />
 
                         <ChatInput
