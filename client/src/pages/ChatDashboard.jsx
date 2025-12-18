@@ -179,7 +179,8 @@ const ChatDashboard = () => {
 
             socket.on('connect', () => {
                 console.log('[SOCKET] Connected:', socket.id);
-                // toast.success(`Socket Connected: ${socket.id}`); // Debug
+                console.log('[SOCKET] URL:', socket.io.uri);
+                toast.success(`Connected to: ${socket.io.uri}`, { id: 'socket-conn' });
                 syncMessages();
                 handleReconnection();
             });
@@ -618,6 +619,16 @@ const ChatDashboard = () => {
         toast.success('Group created successfully!');
     };
 
+    const handleTestNotification = async () => {
+        const permission = await requestNotificationPermission();
+        if (permission === 'granted') {
+            showMessageNotification({ _id: 'test', content: 'Test notifications are working!' }, 'System', false);
+            toast.success('Test notification sent!');
+        } else {
+            toast.error(`Permission is ${permission}. Check browser settings.`);
+        }
+    };
+
     return (
         <div
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300 flex"
@@ -697,7 +708,13 @@ const ChatDashboard = () => {
                             <span className="text-4xl">👋</span>
                         </div>
                         <h2 className="text-2xl font-bold text-white mb-2">Welcome to QuickChat</h2>
-                        <p>Select a conversation or start a new one.</p>
+                        <p className="mb-4">Select a conversation or start a new one.</p>
+                        <button
+                            onClick={handleTestNotification}
+                            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm transition-colors border border-slate-700"
+                        >
+                            Enable Notifications / Test
+                        </button>
                     </div>
                 )}
             </div>
@@ -718,7 +735,11 @@ const ChatDashboard = () => {
                 <GroupInfoModal
                     isOpen={showGroupInfo}
                     onClose={() => setShowGroupInfo(false)}
-                    chat={selectedChat}
+                    group={selectedChat}
+                    onGroupUpdated={(updatedGroup) => {
+                        fetchGroups();
+                        setSelectedChat({ ...updatedGroup, isGroup: true });
+                    }}
                 />
             )}
         </div>
