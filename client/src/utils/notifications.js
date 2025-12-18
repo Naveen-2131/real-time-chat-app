@@ -5,8 +5,14 @@
  * @returns {Promise<string>} Permission status: 'granted', 'denied', or 'default'
  */
 export const requestNotificationPermission = async () => {
+    console.log('[NOTIFICATION] Checking permission...', {
+        supported: 'Notification' in window,
+        permission: Notification.permission,
+        isSecure: window.isSecureContext
+    });
+
     if (!('Notification' in window)) {
-        console.log('This browser does not support notifications');
+        console.warn('[NOTIFICATION] Browser does not support notifications');
         return 'denied';
     }
 
@@ -14,9 +20,15 @@ export const requestNotificationPermission = async () => {
         return 'granted';
     }
 
-    if (Notification.permission !== 'denied') {
-        const permission = await Notification.requestPermission();
-        return permission;
+    if (Notification.permission !== 'denied' || Notification.permission === 'default') {
+        try {
+            const permission = await Notification.requestPermission();
+            console.log('[NOTIFICATION] Permission result:', permission);
+            return permission;
+        } catch (err) {
+            console.error('[NOTIFICATION] Request failed:', err);
+            return 'denied';
+        }
     }
 
     return Notification.permission;
