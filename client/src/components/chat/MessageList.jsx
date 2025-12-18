@@ -19,7 +19,8 @@ const MessageList = ({
     loadMoreMessages,
     hasMore,
     loadingMessages,
-    messageFilters
+    messageFilters,
+    uploadProgress // New prop
 }) => {
     const [reportModalOpen, setReportModalOpen] = useState(false);
     const [messageToReport, setMessageToReport] = useState(null);
@@ -129,35 +130,53 @@ const MessageList = ({
 
         if (msg.fileType === 'image') {
             return (
-                <div className="mt-2 text-center">
+                <div className="mt-2 text-center relative group/img">
                     <img
                         src={getFileUrl(msg.fileUrl)}
                         alt={msg.fileName}
-                        className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'image')}
+                        className={`max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity ${msg.status === 'uploading' ? 'opacity-50 blur-[2px]' : ''}`}
+                        onClick={() => msg.status !== 'uploading' && handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'image')}
                         onError={(e) => {
                             e.target.style.display = 'none'; // Hide broken image
-                            // Create a fallback div element would be complex here, 
-                            // so we'll replace src with a reliable transparent pixel or local asset if available.
-                            // Better approach for React: Handle error in state, but for inline replace:
                             e.target.onerror = null;
-                            // Use a data URI for a gray placeholder
                             e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMzAwIDIwMCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iI2ZmZiIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
                             e.target.className = "max-w-xs rounded-lg opacity-70";
                             e.target.onclick = null;
                         }}
                     />
+                    {msg.status === 'uploading' && (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="relative w-12 h-12">
+                                <svg className="w-full h-full transform -rotate-90">
+                                    <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-slate-700" />
+                                    <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="4" fill="transparent" strokeDasharray={126} strokeDashoffset={126 - (126 * (uploadProgress[msg._id] || 0)) / 100} className="text-primary transition-all duration-300" />
+                                </svg>
+                                <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                                    {uploadProgress[msg._id] || 0}%
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         } else if (msg.fileType === 'video') {
             return (
-                <div className="mt-2">
+                <div className="mt-2 relative">
                     <video
                         src={getFileUrl(msg.fileUrl)}
-                        className="max-w-xs rounded-lg cursor-pointer"
-                        onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'video')}
+                        className={`max-w-xs rounded-lg cursor-pointer ${msg.status === 'uploading' ? 'opacity-50' : ''}`}
+                        onClick={() => msg.status !== 'uploading' && handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'video')}
                     />
-                    <div className="text-xs text-slate-400 mt-1">Click to view in fullscreen</div>
+                    {msg.status === 'uploading' ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="bg-slate-900/60 rounded-full p-4 flex flex-col items-center">
+                                <FiLoader className="w-6 h-6 text-primary animate-spin mb-1" />
+                                <span className="text-[10px] font-bold text-white">{uploadProgress[msg._id] || 0}%</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-xs text-slate-400 mt-1">Click to view in fullscreen</div>
+                    )}
                 </div>
             );
         } else {
@@ -166,13 +185,29 @@ const MessageList = ({
 
             if (isPDF) {
                 return (
-                    <div
-                        onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'pdf')}
-                        className="flex items-center space-x-2 mt-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 cursor-pointer"
-                    >
-                        <FiFile className="w-5 h-5 text-red-500" />
-                        <span className="text-sm">{msg.fileName}</span>
-                        <span className="text-xs text-slate-400 ml-auto">Click to view</span>
+                    <div className="mt-2 w-full">
+                        <div
+                            onClick={() => msg.status !== 'uploading' && handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'pdf')}
+                            className={`flex items-center space-x-2 p-2 bg-slate-100 dark:bg-slate-700 rounded-lg group ${msg.status !== 'uploading' ? 'hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer' : 'opacity-70'}`}
+                        >
+                            <FiFile className="w-5 h-5 text-red-500" />
+                            <div className="flex-1 min-w-0">
+                                <span className="text-sm block truncate text-slate-800 dark:text-slate-200">{msg.fileName}</span>
+                                {msg.status === 'uploading' && (
+                                    <div className="w-full bg-slate-200 dark:bg-slate-600 h-1 rounded-full mt-1 overflow-hidden">
+                                        <div
+                                            className="bg-primary h-full transition-all duration-300"
+                                            style={{ width: `${uploadProgress[msg._id] || 0}%` }}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                            {msg.status === 'uploading' ? (
+                                <span className="text-[10px] font-mono text-primary font-bold">{uploadProgress[msg._id] || 0}%</span>
+                            ) : (
+                                <span className="text-xs text-slate-400 ml-auto group-hover:block hidden transition-all">View</span>
+                            )}
+                        </div>
                     </div>
                 );
             }
