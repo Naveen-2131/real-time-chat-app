@@ -295,7 +295,7 @@ const MessageList = ({
                                     <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center overflow-hidden">
                                         {msg.sender.profilePicture ? (
                                             <img
-                                                src={msg.sender.profilePicture.startsWith('data:')
+                                                src={msg.sender.profilePicture.startsWith('data:') || msg.sender.profilePicture.startsWith('http')
                                                     ? msg.sender.profilePicture
                                                     : `${import.meta.env.VITE_SOCKET_URL}${msg.sender.profilePicture}`
                                                 }
