@@ -22,23 +22,26 @@ const ReportManagement = () => {
         }
     };
 
-    const handleAction = async (reportId, action) => {
+    const handleAction = async (report, action) => {
         try {
-            await api.put(`/admin/reports/${reportId}`, { status: 'resolved' });
-
             if (action === 'delete_message') {
-                // Ideally backend should handle this deletion based on report ID content
-                toast.success('Message deleted (simulation)');
+                if (!report.message?._id) return toast.error('Message ID missing');
+                await api.delete(`/admin/messages/${report.message._id}`);
+                toast.success('Message deleted permanently');
             } else if (action === 'ban_user') {
-                // Ideally backend should handle this
-                toast.success('User banned (simulation)');
-            } else {
-                toast.success('Report resolved');
+                if (!report.reportedUser?._id) return toast.error('User ID missing');
+                await api.put(`/admin/users/${report.reportedUser._id}/status`, { isActive: false });
+                toast.success(`User ${report.reportedUser.username} deactivated`);
             }
+
+            // Always resolve the report after taking action or if dismissed
+            await api.put(`/admin/reports/${report._id}`, { status: 'resolved' });
+            if (action === 'dismiss') toast.success('Report marked as resolved');
 
             fetchReports();
         } catch (error) {
-            toast.error('Failed to update report');
+            console.error('Moderation action failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to process moderation action');
         }
     };
 
@@ -94,8 +97,8 @@ const ReportManagement = () => {
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${report.status === 'resolved'
-                                                ? 'bg-green-100 text-green-800'
-                                                : 'bg-yellow-100 text-yellow-800'
+                                            ? 'bg-green-100 text-green-800'
+                                            : 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                             {report.status}
                                         </span>
@@ -104,21 +107,21 @@ const ReportManagement = () => {
                                         {report.status !== 'resolved' && (
                                             <div className="flex justify-end space-x-2">
                                                 <button
-                                                    onClick={() => handleAction(report._id, 'dismiss')}
+                                                    onClick={() => handleAction(report, 'dismiss')}
                                                     className="text-green-500 hover:text-green-400"
                                                     title="Mark Resolved"
                                                 >
                                                     <FiCheck className="w-5 h-5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleAction(report._id, 'delete_message')}
+                                                    onClick={() => handleAction(report, 'delete_message')}
                                                     className="text-orange-500 hover:text-orange-400"
                                                     title="Delete Message"
                                                 >
                                                     <FiTrash2 className="w-5 h-5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleAction(report._id, 'ban_user')}
+                                                    onClick={() => handleAction(report, 'ban_user')}
                                                     className="text-red-500 hover:text-red-400"
                                                     title="Ban User"
                                                 >
@@ -138,3 +141,4 @@ const ReportManagement = () => {
 };
 
 export default ReportManagement;
+
