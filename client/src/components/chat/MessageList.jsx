@@ -264,7 +264,7 @@ const MessageList = ({
         <div
             ref={scrollRef}
             onScroll={handleScroll}
-            className={`flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar ${isDragging ? 'bg-primary/10 border-2 border-dashed border-primary m-4 rounded-2xl transition-all' : ''}`}
+            className={`flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6 custom-scrollbar ${isDragging ? 'bg-primary/10 border-2 border-dashed border-primary m-4 rounded-2xl transition-all' : ''}`}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -348,7 +348,7 @@ const MessageList = ({
                                 </div>
                             )}
 
-                            <div className={`max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col relative group`}>
+                            <div className={`max-w-[85%] md:max-w-[70%] ${isOwn ? 'items-end' : 'items-start'} flex flex-col relative group`}>
                                 {selectedChat.isGroup && !isOwn && showAvatar && (
                                     <span className="text-xs text-slate-400 ml-1 mb-1">{msg.sender.username}</span>
                                 )}
