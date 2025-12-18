@@ -94,7 +94,7 @@ const ChatHeader = ({
 
             {/* Message Search Bar */}
             {showMsgSearch && (
-                <div className="px-6 py-3 bg-slate-800 border-b border-slate-700 animate-fade-in-down">
+                <div className="px-4 md:px-6 py-3 bg-slate-800 border-b border-slate-700 animate-fade-in-down">
                     <div className="relative mb-3">
                         <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
