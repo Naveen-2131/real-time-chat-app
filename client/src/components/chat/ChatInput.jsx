@@ -88,7 +88,7 @@ const ChatInput = ({
                         hidePreview={true}
                     />
                 </div>
-                <div className="flex-1 bg-slate-700/50 rounded-2xl border border-transparent focus-within:border-primary/50 focus-within:bg-slate-800 transition-all duration-200">
+                <div className="flex-1 bg-slate-700/50 rounded-2xl border border-transparent focus-within:border-primary/50 focus-within:bg-slate-800 transition-all duration-200 min-w-0">
                     <textarea
                         value={newMessage}
                         onChange={(e) => {
@@ -109,7 +109,7 @@ const ChatInput = ({
                 <button
                     type="submit"
                     disabled={!newMessage.trim() && !selectedFile}
-                    className="mb-1 p-3 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 transition-all transform hover:scale-105 active:scale-95"
+                    className="flex-shrink-0 mb-1 p-3 bg-gradient-to-r from-primary to-indigo-600 text-white rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 transition-all transform hover:scale-105 active:scale-95"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                         <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
