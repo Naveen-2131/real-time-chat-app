@@ -14,7 +14,7 @@ import CreateGroupModal from '../components/CreateGroupModal';
 import ProfileModal from '../components/ProfileModal';
 import GroupInfoModal from '../components/GroupInfoModal';
 
-import { requestNotificationPermission, showMessageNotification } from '../utils/notifications';
+import { requestNotificationPermission, showMessageNotification, initAudioContext } from '../utils/notifications';
 
 const ChatDashboard = () => {
     const { user, logout } = useAuth();
@@ -40,6 +40,7 @@ const ChatDashboard = () => {
     const [onlineUsers, setOnlineUsers] = useState(new Set());
     const [messageSearchQuery, setMessageSearchQuery] = useState('');
     const [showMsgSearch, setShowMsgSearch] = useState(false);
+    const [lastSync, setLastSync] = useState(Date.now()); // Force re-render for room joins if needed
 
     // Pagination State
     const [page, setPage] = useState(1);
@@ -53,10 +54,16 @@ const ChatDashboard = () => {
     const messagesEndRef = useRef(null);
     const fileUploadRef = useRef(null);
 
-    // Request notification permission on mount
+    // Request notification permission and init audio on mount
     useEffect(() => {
         requestNotificationPermission();
+        initAudioContext();
     }, []);
+
+    const handleUserGesture = () => {
+        initAudioContext();
+        requestNotificationPermission();
+    };
 
     // Detect screen size for mobile view
     useEffect(() => {
@@ -89,6 +96,8 @@ const ChatDashboard = () => {
 
     // Message deduplication
     const processedMessageIds = useRef(new Set());
+    const conversationsRef = useRef([]);
+    const groupsRef = useRef([]);
 
     // Listen for incoming messages and user status
     // Use refs to access latest state inside socket listeners without re-binding
@@ -99,19 +108,29 @@ const ChatDashboard = () => {
         selectedChatRef.current = selectedChat;
     }, [selectedChat]);
 
+    useEffect(() => {
+        conversationsRef.current = conversations;
+    }, [conversations]);
+
+    useEffect(() => {
+        groupsRef.current = groups;
+    }, [groups]);
+
     // Socket Event Listeners
     useEffect(() => {
         if (socket && user) {
             const handleReconnection = () => {
+                console.log('[SOCKET] Reconnecting/Joining rooms...');
                 if (user && user._id) {
                     socket.emit('join_with_data', { userId: user._id, username: user.username });
                 } else {
                     toast.error('NO USER ID FOUND!');
                 }
 
-                // Re-join all rooms
-                conversations.forEach(chat => socket.emit('join_conversation', chat._id));
-                groups.forEach(group => socket.emit('join_conversation', group._id));
+                // Re-join all rooms using Ref to avoid stale closure
+                console.log(`[SOCKET] Joining ${conversationsRef.current.length} chats and ${groupsRef.current.length} groups`);
+                conversationsRef.current.forEach(chat => socket.emit('join_conversation', chat._id));
+                groupsRef.current.forEach(group => socket.emit('join_conversation', group._id));
 
                 // Re-join current chat and sync
                 if (selectedChatRef.current) {
@@ -129,7 +148,67 @@ const ChatDashboard = () => {
                 handleReconnection();
             }
 
+            // Sync messages on reconnect if chat is open to avoid gaps
+            const syncMessages = async () => {
+                if (selectedChatRef.current && user) {
+                    console.log('[SOCKET] Syncing messages for active chat...');
+                    try {
+                        const chatId = selectedChatRef.current._id;
+                        const isGroup = selectedChatRef.current.isGroup;
+                        // Fetch latest 50 messages
+                        const { data } = isGroup
+                            ? await chatService.fetchGroupMessages(chatId, 1)
+                            : await chatService.fetchMessages(chatId, 1);
+
+                        setMessages(prev => {
+                            // Merge and deduplicate
+                            const newMessages = [...prev];
+                            data.forEach(msg => {
+                                if (!newMessages.some(m => m._id === msg._id)) {
+                                    newMessages.push(msg);
+                                }
+                            });
+                            // Sort by date just in case
+                            return newMessages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                        });
+                    } catch (err) {
+                        console.error('[SOCKET] Sync failed', err);
+                    }
+                }
+            };
+
+            socket.on('connect', () => {
+                console.log('[SOCKET] Connected:', socket.id);
+                // toast.success(`Socket Connected: ${socket.id}`); // Debug
+                syncMessages();
+                handleReconnection();
+            });
+
+            socket.on('disconnect', () => {
+                console.log('[SOCKET] Disconnected');
+                // toast.error('Socket Disconnected'); // Debug
+            });
+
+            socket.on('reconnect', syncMessages);
+
+            // CRITICAL FIX: If socket is ALREADY connected when this component mounts,
+            // we must run the join logic immediately, otherwise we miss the 'connect' event.
+            if (socket.connected) {
+                handleReconnection();
+            }
+
+            socket.on('message_read', ({ conversationId, messageId, userId }) => {
+                // Update message status locally if we tracked it
+                console.log(`[SOCKET] Message ${messageId} read by ${userId}`);
+            });
+
             socket.on('new_message', (message) => {
+                const sender = message.sender?.username || 'Unknown';
+                console.log(`[SOCKET DEBUG] Raw Message received from ${sender}:`, message);
+                // toast('DEBUG: Received Socket Message', { icon: '🐛' });
+
+                console.log('[SOCKET] Received new_message:', message._id, 'from:', message.sender?.username);
+
                 // Deduplication
                 if (processedMessageIds.current.has(message._id)) return;
                 processedMessageIds.current.add(message._id);
@@ -139,7 +218,16 @@ const ChatDashboard = () => {
                     (message.sender.username && user.username && message.sender.username === user.username);
 
                 if (!isOwnMessage) {
+                    // Browser notification
                     showMessageNotification(message, message.sender.username, !!message.group);
+
+                    // In-app Toast fallback
+                    const senderName = message.sender.username || 'Someone';
+                    const groupInfo = message.group ? ` in ${message.group.name || 'group'}` : '';
+                    toast.success(`New message from ${senderName}${groupInfo}`, {
+                        duration: 3000,
+                        position: 'top-right'
+                    });
                 }
 
                 const msgConversationId = message.conversation?._id || message.conversation || message.conversationId;
@@ -531,7 +619,10 @@ const ChatDashboard = () => {
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300 flex">
+        <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300 flex"
+            onClick={handleUserGesture}
+        >
             {/* Sidebar - Conditional for mobile */}
             {(!isMobileView || showChatList) && (
                 <Sidebar
