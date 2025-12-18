@@ -135,10 +135,15 @@ const MessageList = ({
                         className="max-w-xs rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => handleFileClick(getFileUrl(msg.fileUrl), msg.fileName, 'image')}
                         onError={(e) => {
+                            e.target.style.display = 'none'; // Hide broken image
+                            // Create a fallback div element would be complex here, 
+                            // so we'll replace src with a reliable transparent pixel or local asset if available.
+                            // Better approach for React: Handle error in state, but for inline replace:
                             e.target.onerror = null;
-                            e.target.src = 'https://via.placeholder.com/300x200?text=Image+Expired';
-                            e.target.className = "max-w-xs rounded-lg opacity-50";
-                            e.target.onclick = null; // Disable click for broken images
+                            // Use a data URI for a gray placeholder
+                            e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgMzAwIDIwMCI+PHJlY3Qgd2lkdGg9IjMwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiMzMzMiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZmlsbD0iI2ZmZiIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiPkltYWdlIEVycm9yPC90ZXh0Pjwvc3ZnPg==';
+                            e.target.className = "max-w-xs rounded-lg opacity-70";
+                            e.target.onclick = null;
                         }}
                     />
                 </div>
