@@ -127,24 +127,21 @@ const ChatDashboard = () => {
                 console.log('[SOCKET] Reconnecting/Joining rooms...');
                 if (user && user._id) {
                     socket.emit('join_with_data', { userId: user._id, username: user.username });
-                } else {
-                    toast.error('NO USER ID FOUND!');
                 }
 
                 // Re-join all rooms using Ref to avoid stale closure
-                console.log(`[SOCKET] Joining ${conversationsRef.current.length} chats and ${groupsRef.current.length} groups`);
+                const chatCount = conversationsRef.current.length;
+                const groupCount = groupsRef.current.length;
+                console.log(`[SOCKET] Joining ${chatCount} chats and ${groupCount} groups`);
+
                 conversationsRef.current.forEach(chat => socket.emit('join_conversation', chat._id));
                 groupsRef.current.forEach(group => socket.emit('join_conversation', group._id));
 
-                // Re-join current chat and sync
+                // Re-join current chat and sync if needed
                 if (selectedChatRef.current) {
                     socket.emit('join_conversation', selectedChatRef.current._id);
-                    fetchMessages(selectedChatRef.current._id, selectedChatRef.current.isGroup, 1);
                 }
             };
-
-            socket.on('connect', handleReconnection);
-            socket.on('reconnect', handleReconnection);
 
             // CRITICAL FIX: If socket is ALREADY connected when this component mounts,
             // we must run the join logic immediately, otherwise we miss the 'connect' event.
@@ -183,10 +180,8 @@ const ChatDashboard = () => {
 
             socket.on('connect', () => {
                 console.log('[SOCKET] Connected:', socket.id);
-                console.log('[SOCKET] URL:', socket.io.uri);
-                toast.success(`Connected to: ${socket.io.uri}`, { id: 'socket-conn' });
-                syncMessages();
                 handleReconnection();
+                syncMessages();
             });
 
             socket.on('disconnect', () => {
@@ -196,8 +191,6 @@ const ChatDashboard = () => {
 
             socket.on('reconnect', syncMessages);
 
-            // CRITICAL FIX: If socket is ALREADY connected when this component mounts,
-            // we must run the join logic immediately, otherwise we miss the 'connect' event.
             if (socket.connected) {
                 handleReconnection();
             }
@@ -632,7 +625,7 @@ const ChatDashboard = () => {
 
     return (
         <div
-            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm overflow-hidden transition-colors duration-300 flex"
+            className="fixed inset-0 bg-slate-900 overflow-hidden flex"
             onClick={handleUserGesture}
         >
             {/* Sidebar - Conditional for mobile */}
@@ -658,7 +651,7 @@ const ChatDashboard = () => {
             )}
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex flex-col bg-slate-900/50 backdrop-blur-sm relative">
+            <div className={`flex-1 flex flex-col bg-slate-900 relative ${isMobileView && showChatList ? 'hidden' : 'flex'}`}>
                 {selectedChat ? (
                     <>
                         <ChatHeader
