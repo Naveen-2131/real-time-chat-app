@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
@@ -19,14 +20,27 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle 401 errors
+// Response interceptor to handle errors globally
 api.interceptors.response.use(
     (response) => response,
     (error) => {
+        const message = error.response?.data?.message || error.message || 'Something went wrong';
+
         if (error.response?.status === 401) {
-            // Dispatch a custom event that AuthContext can listen to
+            // Token expired or invalid
             window.dispatchEvent(new Event('auth:logout'));
+        } else if (error.response?.status === 403) {
+            // Deactivated account
+            toast.error(message, { id: 'auth-forbidden' });
+            window.dispatchEvent(new Event('auth:logout'));
+        } else if (!error.response) {
+            // Network error (server down)
+            toast.error('Server connection lost. Please check your internet.', { id: 'network-error' });
+        } else {
+            // Other errors
+            toast.error(message);
         }
+
         return Promise.reject(error);
     }
 );
