@@ -68,14 +68,30 @@ let audioContext = null;
 /**
  * Initialize AudioContext after user interaction
  */
-const initAudioContext = () => {
+export const initAudioContext = () => {
     if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
     }
     if (audioContext.state === 'suspended') {
-        audioContext.resume();
+        audioContext.resume().then(() => {
+            console.log('AudioContext resumed successfully');
+        }).catch(err => {
+            console.log('AudioContext resume failed:', err);
+        });
     }
 };
+
+// Auto-resume audio context on first click/keypress
+if (typeof window !== 'undefined') {
+    const handleInteraction = () => {
+        initAudioContext();
+        // Remove listeners after first interaction
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('keydown', handleInteraction);
+    };
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+}
 
 /**
  * Play notification sound
@@ -85,12 +101,12 @@ export const playNotificationSound = (soundType = 'message') => {
     try {
         // Initialize AudioContext if needed
         initAudioContext();
-        
+
         if (!audioContext || audioContext.state === 'suspended') {
             // AudioContext not ready yet, skip sound
             return;
         }
-        
+
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
 
@@ -138,7 +154,7 @@ export const updateFavicon = (hasNotification) => {
  * @returns {boolean} True if app is in focus
  */
 export const isAppInFocus = () => {
-    return document.hasFocus();
+    return document.hasFocus() && !document.hidden;
 };
 
 /**
@@ -148,12 +164,27 @@ export const isAppInFocus = () => {
  * @param {boolean} isGroup - Whether the message is from a group
  */
 export const showMessageNotification = (message, senderName, isGroup = false) => {
-    // Don't show notification if app is in focus
-    // if (isAppInFocus()) {
-    //     return;
-    // }
+    console.log('[NOTIFICATION] Attempting to show notification...', {
+        permission: Notification.permission,
+        isAppInFocus: isAppInFocus()
+    });
 
-    const title = isGroup ? `${senderName} in ${message.groupName}` : senderName;
+    // Don't show notification if app is in focus
+    if (isAppInFocus()) {
+        console.log('[NOTIFICATION] App is in focus, skipping browser notification');
+        return;
+    }
+
+    if (Notification.permission !== 'granted') {
+        console.warn('[NOTIFICATION] Permission not granted');
+        return;
+    }
+
+    // Enhanced sender and title extraction
+    const actualSenderName = senderName || message.sender?.username || 'Someone';
+    const groupName = message.group?.name || 'a group';
+
+    const title = isGroup ? `${actualSenderName} in ${groupName}` : actualSenderName;
     const body = message.content || (message.fileUrl ? '📎 Sent a file' : 'New message');
 
     showNotification(title, {
