@@ -52,12 +52,12 @@ const ChatInput = ({
     return (
         <div className="px-5 py-2 sm:p-4 bg-slate-800/80 backdrop-blur-md border-t border-slate-700/50 z-10 flex-shrink-0">
             {selectedFile && (
-                <div className="max-w-4xl mx-auto mb-3 animate-fade-in-up">
+                <div className="max-w-4xl mx-auto mb-3 animate-fade-in-up max-h-24 overflow-y-auto">
                     <div className="flex items-center space-x-3 p-2 bg-slate-700/50 rounded-xl border border-slate-600/50">
                         {preview ? (
-                            <img src={preview} alt="Preview" className="w-12 h-12 object-cover rounded-lg border border-slate-600 shadow-sm" />
+                            <img src={preview} alt="Preview" className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-slate-600 shadow-sm flex-shrink-0" />
                         ) : (
-                            <div className="w-12 h-12 bg-slate-800 rounded-lg flex items-center justify-center text-primary">
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-slate-800 rounded-lg flex items-center justify-center text-primary flex-shrink-0">
                                 {getFileIcon()}
                             </div>
                         )}
@@ -72,7 +72,7 @@ const ChatInput = ({
                         <button
                             type="button"
                             onClick={() => setSelectedFile(null)}
-                            className="p-2 hover:bg-slate-600 text-slate-400 hover:text-white rounded-lg transition-colors"
+                            className="p-2 hover:bg-slate-600 text-slate-400 hover:text-white rounded-lg transition-colors flex-shrink-0"
                         >
                             <FiX className="w-5 h-5" />
                         </button>
